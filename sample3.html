@@ -1,0 +1,1279 @@
+      <h1 id="10.advancedpackagemanagement">10. Zaawansowane zarządzanie pakietami.</h1>
+      <p>
+        W poprzednim rozdziale zapoznaliśmy się z podstawą zarządania pakietami
+        jaka nie wątpliwie jest program <em>rpm</em>. Jego główną wadą jest to,
+        iż nie rozwiązuje on zależności instalowanych pakietów. Z tego powodu
+        potrzebne było lepsze narzędzie do obsługi oprogramowania w systemie,
+        dlatego też twórcy RHEL wdrożyli program <em>yum</em>, który przez
+        lata sprawdzał się postaci menedżera pakietów, a od wersji 8 Red Hat
+        Enterprise Linux został on zastąpiony programem <strong>dnf</strong>,
+        który ma nieco większe możliwości. Zanim przejdziemy do zarządzania
+        pakietami, trochę teorii.
+      </p>
+      <p>
+        <em>Dnf</em> wprowadza do zarządzania pakietami takie pojęcia jak
+        <strong>grupy pakietów</strong> - są tematyczne grupy aplikacji,
+        którymi możemy wzbogacić nasz system. Powiedzmy, że potrzebujemy w
+        systemie obsługi kart inteligentnych to zamiast szukać odpowiednich
+        pakietów, możemy zainstalować wszystkie niezbędne programy podając
+        poleceniu <em>dnf</em> nazwę grupy.
+      </p>
+      <p>
+        Wraz z <em>dnf</em> pojawiają się takie pojęcia jak
+        <strong>moduł aplikacji</strong> oraz <strong>strumień aplikacji</strong>.
+        Moduł aplikacji, to podobnie do grupy jest zbiór pakietów, ale
+        opowiedzialnych za jedną aplikację. W module zawarte są wszystkie
+        pakiety odpowiedzialne za działanie aplikacji poza zależnościami mogą
+        znajdować się tam także biblioteki, generalnie całe środowisko. Moduły
+        posiadają swoje strumienie, czyli konkretne wersje pakietów aplikacji, 
+        które dostarczają. W systemie może być zainstalowany tylko jeden
+        strumień danej aplikacji. Między strumieniami można się przełączać.
+        będziemy to omawiać pod koniec tego rozdziału. Moduły w
+        strumieniach posiadają jeszcze <strong>profile</strong>. Profile są
+        to zbiory pakietów, programów określanych przez moduł zbudowane z 
+        myślą o przeznaczeniu aplikacji. Na przykład systemy bazodanowe mogą
+        posiadać pakiety przeznaczone dla serwera oraz dla klienta. Jeśli baza
+        danych znajduje się na innym serwerze niż aplikacja, która z niej
+        korzysta, to w systemie aplikacji nie ma sensu instalować wszystkich
+        pakietów związanych z cała bazą wystarczą pakiety, które będą
+        udostępniać tylko i wyłącznie możliwość połączenia się z bazą.
+      </p>
+      <p>
+        RHEL w wersji 8 dzieli również repozytorium (bazę pakietów) na dwie
+        części. Piewsza część <strong>BaseOS</strong>, zawiera jak sama nazwa
+        wskazuje pakiety bazowe, które zawierają większość pakietów 
+        niezbędnych do działania systemu operacyjnego. Druga część
+        <strong>AppStream</strong> zawiera wszystkie dodatkowe aplikacje. Tego
+        rodzaju podział został wprowadzony z względu na to, że w momencie 
+        przezprowadzania aktualizacji systemu, aktualizowane było również
+        zainstalowane na nim oprogramowanie co mogło nie być porządane i
+        wprowadzać nie potrzebne zamieszanie lub destabilizować cały systemu.
+      </p>
+      <p>
+        Kolejną rzeczą wartą wspomnienia są repozytoria. Nasze systemy, których
+        używamy do wypróbowywania przykładów oraz do rozwiązywania ćwiczeń, nie
+        są zarejestrowane na naszych kontach Red Hat. Rejestracja systemu daje
+        możliwość aktualizacji pakietów zawartych na płytach oraz instalowania
+        ich bezpośrednio z sieci. Oprócz repozytoriów firmy Red Hat mamy
+        rownież inne repozytoria dostępne w sieci. Takie jak na przykład
+        <em>RPM Fusion</em>. Bez tych repozytoriów korzystanie z RHEL 9 w
+        codziennym użyciu na desktopie nie miało by sensu. Przynajmniej w moim
+        wypadku ;). Konfigurację repozytriów przezprowadza się zapisując je
+        w pliku w katalogu <em>/etc/yum.repos.d</em>, w jednym pliku może
+        znajdować się kilka repozytoriów, sposób organizacji zależy od nas.
+      </p>
+      <p>
+        Na koniec, kilka spraw organizacyjnych. W RHEL 9 poki co brakuje
+        modułów. W tym odnośniku znajduje się dowód, że na moduły przyjdzie na
+        poczekać do wersji 9.1. <a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html-single/managing_software_with_the_dnf_tool/index#con_modules_assembly_distribution-of-content-in-rhel-9">https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html-single/managing_software_with_the_dnf_tool/index#con_modules_assembly_distribution-of-content-in-rhel-9</a>
+        Tak więc wszystkie przykłady jakie będę wykonywać w tym rodziale będą
+        realizowane za pomocą Red Hat Enterprise Linux w wersji 8.6. Po
+        zarejestrowaniu się możemy pobrać RHEL aż do wersji 8.0. Także możemy
+        stworzyć środowisko maszyny <em>server1</em> na podstawie RHEL 8.
+      </p>
+      <h2 id="10.1.repoconfig">10.1. Konfiguracja repozytorium dnf</h2>
+      <p>
+        Jak już wspomniałem repozytorium konfigurujemy za pomocą plików
+        złożonych w katalogu <em>/etc/yum.repos.d</em>. Na początku jednak
+        musimy dodać płytę do pliku <em>/etc/fstab</em>. Opisywałem ten proces
+        na początku 9 rozdziału o <a href="#9.1.1.gettinginfo">tutaj</a>.
+        Dlatego też w przykładach przyjmę iż płyta jest montowana w podkatalogu
+        <em>/mnt</em>. Jak pamiętamy z poprzedniego rozdziału na płycie
+        znajdują się dwa katalogi z pakietami: <em>BaseOS/Packages</em> oraz
+        <em>AppStream/Packages</em>. W konfiguracji podajemy tylko te pierwsze
+        człony tych ścieżek, ponieważ w niej konfigurujemy katalog bazowy.
+        Konfiguracja każdego z repozytorium wymaga minimum 4 wierszy. Poniższy
+        przykład przedstawia zawartość pliku konfiguracjynego repozytoriów z
+        płyty instalacjynej RHEL 8.
+      </p>
+<pre class="code-block">
+[BaseOS]
+name=BaseOS
+baseurl=file:///mnt/BaseOS
+gpgcheck=0
+
+[AppStream]
+name=AppStream
+baseurl=file:///mnt/AppStream
+gpgcheck=0
+</pre>
+      <p>
+        W nawiasach kwadratowych znajdują się unikatowe identyfikatory 
+        repozytoriów (<code class="code-inline">[BaseOS]</code>), następnie
+        dyrektywa <code class="code-inline">name</code> zawiera ich opisy
+        w przypadku środowisk testowych nie musimy się wysilać z opisami czy
+        sprawdzać autentyczności pakietów przy użyciu <em>GPG</em>
+        (<code class="code-inline">gpgcheck=0</code>). Wyłączenie sprawdzania
+        pakietów usprawni proces ich instalacji, w przeciwym razie za
+        każdą czynnością opartą o repozytorium otrzymywalibyśmy monit. Istotną
+        funkcję pełni tym
+        przypadku dyrektywa <code class="code-inline">baseurl</code>, która
+        wskazuje na miejsce przechowywania pakietów, tym przypadku jest katalog
+        zatem protokołem poprzedzającym ścieżkę będzie
+        <code class="code-inline">file</code>, jak w każdym adresie <em>URL</em>
+        następuje <code class="code-inline">://</code>, a następnie
+        (w tym przypadku) bezwzględna ścieżka do katalogu.
+      </p>
+      <p class="exam_tip">
+        Umiejętnośc konfigurowania repozytoriów <em>yum</em>/<em>dnf</em> z
+        wykorzystaniem <em>URL</em> może być istotna do wykonania pewnych
+        zadań egzaminacyjnych. Konstruując <em>URL</em> możemy użyć takich
+        protokołów jak FTP, HTTP czy HTTPS (zapis w <em>URL</em> zawsze małymi 
+        literami) po czym następuje dwukropek z dwoma slashami <em>://</em>
+        a następnie adres repozytorium. 
+      </p>
+      <p>
+        Po zdefiniowaniu repozytoriów zapisujemy zmiany w pliku. Aby
+        zweryfikować poprawność konfiguracji wydajemy polecenie, które
+        odświerza pamięc podręczną pakietów.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf makecache
+[sudo] password for user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+This system is not registered with an entitlement server. You can use 
+subscription-manager to register.
+BaseOS                                              1.6 MB/s | 2.7 kB     00:00    
+AppStream                                           2.3 MB/s | 2.8 kB     00:00 
+Metadata cache created.
+</pre>
+      <p>
+        Metadane zostały załadowane do pamięci podręcznej. Za pomocą poniższego
+        polecenia możemy wyświetlić informacje na temat zdefiniowanych w naszym
+        systemie repozytoriów.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 mnt]$ sudo dnf repoinfo -v
+...
+DNF version: 4.7.0
+cachedir: /var/cache/dnf
+Ostatnio sprawdzono ważność metadanych: 0:00:20 temu w dniu nie, 10 lip 2022, 22:51:36.
+Identyfikator repozytorium        : AppStream
+Nazwa repozytorium                : AppStream
+Wersja repozytorium               : 1650471026
+Aktualizacje repozytorium         : śro, 20 kwi 2022, 18:10:27
+Pakiety repozytorium              : 6 609
+Dostępne pakiety repozytorium     : 5 345
+Rozmiar repozytorium              : 8.6 G
+Podstawowy adres URL repozytorium : file:///mnt/AppStream
+Wygaszenie repozytorium           : 172 800 s (ostatnio: nie, 10 lip 2022, 22:51:36)
+Nazwa pliku repozytorium          : /etc/yum.repos.d/local.repo
+
+Identyfikator repozytorium        : BaseOS
+Nazwa repozytorium                : BaseOS
+Wersja repozytorium               : 1650471057
+Aktualizacje repozytorium         : śro, 20 kwi 2022, 18:10:59
+Pakiety repozytorium              : 1 714
+Dostępne pakiety repozytorium     : 1 712
+Rozmiar repozytorium              : 1.3 G
+Podstawowy adres URL repozytorium : file:///mnt/BaseOS
+Wygaszenie repozytorium           : 172 800 s (ostatnio: nie, 10 lip 2022, 22:51:34)
+Nazwa pliku repozytorium          : /etc/yum.repos.d/local.repo
+Razem pakietów: 8 323
+</pre>
+      <p>
+        Tak zdefiniowanych repozytoriów będziemy używać w przykładach oraz
+        do rozwiązywania zadań w ćwiczeniach.
+      </p>
+      <h2 id="10.2.individualpackagemgmnt">10.2. Zarządzanie pojedynczymi pakietami</h2>
+      <p>
+        Program <em>dnf</em> jest stanie wykonywać identyczne czynności jak
+        polecenie <em>rpm</em>. Z racji tego, iż skonfigurowaliśmy wcześniej
+        repozytorium nie musimy podawać żadnych ścieżek wystarczy nazwa
+        pakietu, a ją możemy poznać wyświetlając listy pakietów.
+      </p>
+      <h3 id="10.2.1.listofpackages">10.2.1. Listy pakietów</h3>
+      <p>
+        Z pomocą
+        poniższego polecenia możemy wyświetlić listę wszystkich pakietów.
+        Domyślnie lista pakietów jes podzielona na dwie części: zainstalowane
+        oraz dostępne pakiety.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf list
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. 
+You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 9:22:00 temu w dniu nie, 10 lip 2022, 22:51:36.
+Zainstalowane pakiety
+GConf2.x86_64                  3.2.6-22.el8                           @AppStream
+ModemManager.x86_64            1.18.2-1.el8                           @anaconda 
+ModemManager-glib.x86_64       1.18.2-1.el8                           @anaconda 
+NetworkManager.x86_64          1:1.36.0-4.el8                         @anaconda 
+NetworkManager-adsl.x86_64     1:1.36.0-4.el8                         @anaconda 
+NetworkManager-bluetooth.x86_64
+                               1:1.36.0-4.el8                         @anaconda 
+NetworkManager-config-server.noarch
+                               1:1.36.0-4.el8                         @anaconda 
+NetworkManager-libnm.x86_64    1:1.36.0-4.el8                         @anaconda 
+NetworkManager-team.x86_64     1:1.36.0-4.el8                         @anaconda 
+NetworkManager-tui.x86_64      1:1.36.0-4.el8                         @anaconda 
+NetworkManager-wifi.x86_64     1:1.36.0-4.el8                         @anaconda 
+NetworkManager-wwan.x86_64     1:1.36.0-4.el8                         @anaconda
+...
+Dostępne pakiety
+CUnit.i686                     2.1.3-17.el8                           AppStream 
+CUnit.x86_64                   2.1.3-17.el8                           AppStream 
+GConf2.i686                    3.2.6-22.el8                           AppStream 
+HdrHistogram.noarch            2.1.11-3.module+el8.5.0+12798+cbad756b AppStream 
+HdrHistogram-javadoc.noarch    2.1.11-3.module+el8.5.0+12798+cbad756b AppStream 
+HdrHistogram_c.i686            0.9.13-2.el8                           AppStream 
+HdrHistogram_c.x86_64          0.9.13-2.el8                           AppStream 
+Judy.x86_64                    1.0.5-18.module+el8+2765+cfa4f87b      AppStream 
+LibRaw.i686                    0.19.5-3.el8                           AppStream 
+LibRaw.x86_64                  0.19.5-3.el8                           AppStream 
+ModemManager-glib.i686         1.18.2-1.el8                           BaseOS    
+NetworkManager-cloud-setup.x86_64
+                               1:1.36.0-4.el8                         AppStream 
+NetworkManager-config-connectivity-redhat.noarch
+                               1:1.36.0-4.el8                         BaseOS    
+NetworkManager-dispatcher-routing-rules.noarch
+</pre>
+      <p>
+        Ilość wyświetlonych pakietów możemy zmniejszyć za pomocą odpowiednich
+        opcji, wyświetlając tylko listę pakietów zainstalowanych
+        (<em>--installed</em>) lub listę pakietów dostępnych
+        (<em>--available</em>).
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf list --installed
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. 
+You can use subscription-manager to register.
+
+Zainstalowane pakiety
+GConf2.x86_64                              3.2.6-22.el8               @AppStream
+ModemManager.x86_64                        1.18.2-1.el8               @anaconda 
+ModemManager-glib.x86_64                   1.18.2-1.el8               @anaconda 
+NetworkManager.x86_64                      1:1.36.0-4.el8             @anaconda 
+NetworkManager-adsl.x86_64                 1:1.36.0-4.el8             @anaconda 
+NetworkManager-bluetooth.x86_64            1:1.36.0-4.el8             @anaconda 
+NetworkManager-config-server.noarch        1:1.36.0-4.el8             @anaconda 
+NetworkManager-libnm.x86_64                1:1.36.0-4.el8             @anaconda 
+
+[user@rhel8-vm1 ~]$ sudo dnf list --available
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. 
+You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 9:33:18 temu w dniu nie, 10 lip 2022, 22:51:36.
+Dostępne pakiety
+CUnit.i686                     2.1.3-17.el8                            AppStream
+CUnit.x86_64                   2.1.3-17.el8                            AppStream
+GConf2.i686                    3.2.6-22.el8                            AppStream
+HdrHistogram.noarch            2.1.11-3.module+el8.5.0+12798+cbad756b  AppStream
+HdrHistogram-javadoc.noarch    2.1.11-3.module+el8.5.0+12798+cbad756b  AppStream
+HdrHistogram_c.i686            0.9.13-2.el8                            AppStream
+HdrHistogram_c.x86_64          0.9.13-2.el8                            AppStream
+Judy.x86_64                    1.0.5-18.module+el8+2765+cfa4f87b       AppStream
+LibRaw.i686                    0.19.5-3.el8                            AppStream
+LibRaw.x86_64                  0.19.5-3.el8                            AppStream
+ModemManager-glib.i686         1.18.2-1.el8                            BaseOS   
+</pre>
+      <p>
+        Listy są podzielone na trzy kolumny w pierwsze z nich znajduje się
+        nazwa pakietu, w drugie wersja, a w trzeciej nazwa repozytorium, które
+        zawiera ten pakiet lub z które został on zainstalowany. W przypadku
+        wartości <code class="code-inline">@anaconda</code>, są to pakiety
+        zainstalowane podczas instalacji systemu, w przypadku pakietów 
+        instalowanych
+        za pomocą polecenia <em>rpm</em> w trzeciej kolumnie będzie widnieć
+        napis <em>@System</em>.
+      </p> 
+      <p>
+        Przydatną opcją jeśli korzystamy z repozytoriów sieciowych może być
+        <em>updates</em> wydawane po podpoleceniu <em>list</em>. W <em>dnf</em>
+        opcje często posiadają formę podpoleceń, natomiast to co my możemy
+        uważać za opcję jest modyfikatorem. Podpolecenie <em>updates</em>
+        wyświetla pakiety możliwe do zaktualizowania.
+      </p>
+      <h3 id="10.2.2.repoqueries">10.2.2. Zapytania do repozytorium</h3>
+      <p>
+        <em>Dnf</em> w przeciwieństwie do <em>rpm</em> pozwala nam przeszukiwać
+        repozytorium pod względem występowania na przykład pakietu lub możemy
+        podać ścieżkę do pliku znajdującego się w systemie a program zwrócić
+        nam informacje z jakiego pakietu pochodzi. 
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf repoquery zsh
+[sudo] hasło użytkownika user: 
+
+Ostatnio sprawdzono ważność metadanych: 0:03:42 temu w dniu pon, 11 lip 2022, 08:36:18.
+zsh-0:5.5.1-9.el8.x86_64
+
+[user@rhel8-vm1 ~]$ sudo dnf repoquery /etc/bashrc
+Ostatnio sprawdzono ważność metadanych: 0:04:02 temu w dniu pon, 11 lip 2022, 08:36:18.
+setup-0:2.12.2-6.el8.noarch
+</pre>
+      <p>
+        Podpolecenie <em>repoquery</em> pozwala na sprecyzowanie repozytorium,
+        do którego będą kierowane zapytania, za pomocą opcji <em>--repo</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf repoquery --repo BaseOS zsh
+Ostatnio sprawdzono ważność metadanych: 0:16:51 temu w dniu pon, 11 lip 2022, 08:36:18.
+zsh-0:5.5.1-9.el8.x86_64
+</pre>
+      <p>
+        Podpolecenie <em>repoquery</em> posiada całą masę modyfikatorów dzięki
+        nim możemy na przykład sprawdzić zależności pakietów. Aby ujawnić 
+        listę modyfikatorów możemy użyć podpolecenia <em>repoquery</em> wraz z
+        z <em>--help</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf repoquery --help
+Repoquery command-specific options:
+  -a, --all             Odpytuje wszystkie pakiety (skrót do „repoquery '*'”
+                        lub repoquery bez parametru)
+  --show-duplicates     Odpytuje wszystkie wersje pakietów (domyślnie)
+  --arch [arch], --archlist [arch]
+                        wyświetla tylko wyniki dla tej ARCHITEKTURY
+  -f FILE [FILE ...], --file FILE [FILE ...]
+                        wyświetla tylko wyniki posiadające PLIK
+...
+</pre>
+      <h3 id="10.2.3.info">10.2.3. Pobieranie informacji o pakietach</h3>
+      <p>
+        Polecenie <em>dnf</em> pozwala uzyskać informacje na temat pakietu.
+        Za pomocą podpolecenia <em>info</em> możemy pobrać informacje o 
+        na przykład wersji, numerze wydania, rozmiarze czy repozytorium w
+        jakim jest przechowywane.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf info php
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 0:40:02 temu w dniu pon, 11 lip 2022, 08:36:18.
+Dostępne pakiety
+Nazwa        : php
+Wersja       : 7.2.24
+Wydanie      : 1.module+el8.2.0+4601+7c76a223
+Architektura : x86_64
+Rozmiar      : 1.5 M
+Źródło       : php-7.2.24-1.module+el8.2.0+4601+7c76a223.src.rpm
+Repozytorium : AppStream
+Podsumowanie : PHP scripting language for creating dynamic web sites
+Adres URL    : http://www.php.net/
+Licencja     : PHP and Zend and BSD and MIT and ASL 1.0
+Opis         : PHP is an HTML-embedded scripting language. PHP attempts to make
+             : it easy for developers to write dynamically generated web pages.
+             : PHP also offers built-in database integration for several
+             : commercial and non-commercial database management systems, so
+             : writing a database-enabled webpage with PHP is fairly simple. The
+             : most common use of PHP coding is probably as a replacement for
+             : CGI scripts.
+             : 
+             : The php package contains the module (often referred to as
+             : mod_php) which adds support for the PHP language to Apache HTTP
+             : Server.
+</pre>
+      <p>
+        Teraz kiedy wiemy jak możemy uzyskać informacje na temat interesujących
+        nas pakietów możemy przejść do podstawowych czynności z nimi 
+        związanych, czyli: instalacji, aktualizacji oraz usuwania.
+      </p>
+      <h3 id="10.2.4.installpackage">10.2.4. Instalacja pakietów</h3>
+      <p>
+        Instalacja pakietów jest banalnie prosta w przypadku narzędzia <em>dnf</em>
+        wymaga ona użycia podpolecenia <strong>install</strong> a następnie
+        podania nazwy pakietu. 
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf install mc
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:07:02 temu w dniu pon, 11 lip 2022, 08:36:18.
+Rozwiązano zależności.
+================================================================================
+ Pakiet      Architektura    Wersja                    Repozytorium       Rozm.
+================================================================================
+Instalowanie:
+ mc          x86_64          1:4.8.19-9.el8            AppStream          1.9 M
+
+Podsumowanie transakcji
+================================================================================
+Instalacja  1 pakiet
+
+Całkowity rozmiar: 1.9 M
+Rozmiar po zainstalowaniu: 6.8 M
+W porządku? [t/N]: 
+...
+</pre> 
+      <p>
+        Program wyświetli w tabeli wszyskie instalowane pakiety, 
+        następnie wielkość 
+        pakietu oraz ilość miejsca na dysku zabranego na potrzeby instalacji.
+        Po zapoznaniu
+        się z tym możemy potwierdzić za pomocą <em>t</em> (w polskiej wersji
+        językowej) lub <em>y</em> lub przerwać na przykład naciskając Enter,
+        ponieważ opcja <em>N</em> (nie, <em>no</em>) jest domyślna. Po
+        zatwierdzeniu pakietów rozpocznie się ich pobieranie oraz instalacja.
+      </p>
+<pre class="code-block">
+...
+Pobieranie pakietów:
+Wykonywanie sprawdzania transakcji
+Pomyślnie ukończono sprawdzanie transakcji.
+Wykonywanie testu transakcji
+Pomyślnie ukończono test transakcji.
+Wykonywanie transakcji
+  Przygotowywanie                :                                          1/1 
+  Instalowanie                   : mc-1:4.8.19-9.el8.x86_64                 1/1 
+  Wykonywanie skryptu            : mc-1:4.8.19-9.el8.x86_64                 1/1 
+  Sprawdzanie                    : mc-1:4.8.19-9.el8.x86_64                 1/1 
+Installed products updated.
+
+Zainstalowano:
+  mc-1:4.8.19-9.el8.x86_64                                                      
+
+Ukończono.
+</pre>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf list --installed mc
+[sudo] hasło użytkownika user: 
+
+Zainstalowane pakiety
+mc.x86_64                       1:4.8.19-9.el8                        @AppStream
+</pre> 
+      <p>
+        <em>Dnf</em> daje nam możliwość przeprowadzanie lokalnej instalacji
+        podając ścieżkę do pliku <em>.rpm</em>. Ta czynność wymaga użycia
+        podpolecenia <em>localinstall</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf localinstall /mnt/AppStream/Packages/dcraw-9.27.0-9.el8.x86_64.rpm 
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:23:58 temu w dniu pon, 11 lip 2022, 08:36:18.
+Rozwiązano zależności.
+================================================================================
+ Pakiet        Architektura   Wersja                 Repozytorium         Rozm.
+================================================================================
+Instalowanie:
+ dcraw         x86_64         9.27.0-9.el8           @commandline         267 k
+
+Podsumowanie transakcji
+================================================================================
+Instalacja  1 pakiet
+
+Całkowity rozmiar: 267 k
+Rozmiar po zainstalowaniu: 548 k
+W porządku? [t/N]: t 
+Pobieranie pakietów:
+Wykonywanie sprawdzania transakcji
+Pomyślnie ukończono sprawdzanie transakcji.
+Wykonywanie testu transakcji
+Pomyślnie ukończono test transakcji.
+Wykonywanie transakcji
+  Przygotowywanie                :                                          1/1 
+  Instalowanie                   : dcraw-9.27.0-9.el8.x86_64                1/1 
+  Wykonywanie skryptu            : dcraw-9.27.0-9.el8.x86_64                1/1 
+  Sprawdzanie                    : dcraw-9.27.0-9.el8.x86_64                1/1 
+Installed products updated.
+
+Zainstalowano:
+  dcraw-9.27.0-9.el8.x86_64                                                     
+
+Ukończono.
+</pre>
+      <h3 id="10.2.5.updatepackages">10.2.5. Aktualizacje pakietów</h3>
+      <p>
+        Aktualizacja pakietów za pomocą <em>dnf</em> wymaga użycia podpolecenia
+        <em>update</em>. Aktualizacje pojedynczych pakietów przeprowadzamy 
+        podając
+        ich nazwę po podpoleceniu. Ta funkcjonalność wymaga jednak aby pakiet
+        był już zainstalowany w systemie. Jeśli wydamy to podpolecenie bez
+        żadnego argumentu polecenie sprawdzi wszystkie zainstalowane pakiety
+        w systemie, czy występują dla nich jakieś aktualizacje następnie
+        spyta czy je zainstalować.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf update autofs
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:34:19 temu w dniu pon, 11 lip 2022, 08:36:18.
+Pakiet autofs jest dostępny, ale nie jest zainstalowany.
+Brak wyników dla parametru: autofs
+Błąd: Brak pakietów oznaczonych do aktualizacji.
+
+[user@rhel8-vm1 ~]$ sudo dnf update
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:38:26 temu w dniu pon, 11 lip 2022, 08:36:18.
+Rozwiązano zależności.
+Nie ma nic do zrobienia.
+Ukończono.
+</pre>
+      <h3 id="10.2.6.removepackages">10.2.6. Usuwanie pakietów</h3>
+      <p>
+        Usuwanie pakietów w przypadku <em>dnf</em> wymaga użycia podpolecenia
+        <em>remove</em>. Polecenie usunie zainstalowany pakiet z systemu wraz
+        ze wszystkimi jego plikami.
+      </p> 
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf remove mc
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Rozwiązano zależności.
+================================================================================
+ Pakiet      Architektura    Wersja                   Repozytorium        Rozm.
+================================================================================
+Usuwanie:
+ mc          x86_64          1:4.8.19-9.el8           @AppStream          6.8 M
+
+Podsumowanie transakcji
+================================================================================
+Usunięcie  1 pakiet
+
+Zwolnione miejsce: 6.8 M
+W porządku? [t/N]: t
+Wykonywanie sprawdzania transakcji
+Pomyślnie ukończono sprawdzanie transakcji.
+Wykonywanie testu transakcji
+Pomyślnie ukończono test transakcji.
+Wykonywanie transakcji
+  Przygotowywanie                :                                          1/1 
+  Usuwanie                       : mc-1:4.8.19-9.el8.x86_64                 1/1 
+  Wykonywanie skryptu            : mc-1:4.8.19-9.el8.x86_64                 1/1 
+  Sprawdzanie                    : mc-1:4.8.19-9.el8.x86_64                 1/1 
+Installed products updated.
+
+Usunięto:
+  mc-1:4.8.19-9.el8.x86_64                                                      
+
+Ukończono.
+</pre>
+      <p>
+        W przypadku instalowania pakietu polecenie przekazywało nam informacje 
+        o użytym na potrzeby instalacji miejscu na dysku. Tak teraz informuje
+        o jego zwolnieniu.
+      </p>
+      <h3 id="10.2.7.provides">10.2.7. Więcej informacji na temat pakietów</h3>
+      <p>
+        Innym sposobem na uzyskanie informacji o tym jaki pakiet zawiera
+        określony plik jest użycie podpolecenia <em>provides</em>. Sprawdza
+        ono występowanie plików w pakietach zainstalowanych w systemie jak
+        i tych możliwych do instalacji.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf provides /etc/passwd
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 2:04:16 temu w dniu pon, 11 lip 2022, 08:36:18.
+setup-2.12.2-6.el8.noarch : A set of system configuration and setup files
+Repozytorium       : @System
+Dopasowano z:
+Nazwa pliku : /etc/passwd
+
+setup-2.12.2-6.el8.noarch : A set of system configuration and setup files
+Repozytorium       : BaseOS
+Dopasowano z:
+Nazwa pliku : /etc/passwd
+</pre>
+      <p>
+        Po za opisaną metodą na wyszukiwanie informacji o pakietach, do
+        dyspozycji posiadamy jeszcze podpolecenie <em>search</em>, które
+        wyszukuje słów kluczowych w podsumowaniu opisu pakietu oraz jego nazwie.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf search setup
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 2:20:48 temu w dniu pon, 11 lip 2022, 08:36:18.
+==================== Dopasowano Nazwa i Podsumowanie: setup ====================
+setup.noarch : A set of system configuration and setup files
+cryptsetup-libs.x86_64 : Cryptsetup shared library
+cryptsetup-libs.i686 : Cryptsetup shared library
+ibus-setup.noarch : IBus setup utility
+initial-setup-gui.x86_64 : Graphical user interface for the initial-setup
+                         : utility
+...
+=========================== Dopasowano Nazwa: setup ============================
+NetworkManager-cloud-setup.x86_64 : Automatically configure NetworkManager in
+                                  : cloud
+cryptsetup.x86_64 : A utility for setting up encrypted disks
+cryptsetup-devel.i686 : Headers and libraries for using encrypted file systems
+cryptsetup-devel.x86_64 : Headers and libraries for using encrypted file systems
+cryptsetup-reencrypt.x86_64 : A utility for offline reencryption of LUKS
+                            : encrypted disks.
+...
+======================== Dopasowano Podsumowanie: setup ========================
+rhsm-gtk.x86_64 : GTK+ widgets used by subscription-manager-gui and
+                : initial_setup
+</pre>
+      <p>
+        Jak możemy zauważyć polecenie wyświetla znalezione informacje w trzech
+        grupach.
+      </p>
+      <h2 id="10.3.packagegroup">10.3. Grupy pakietów</h2>
+      <p>
+        Pośród innych sposobów na zarządzanie pakietami możemy wymienić grupy
+        pakietów. Są to zestawy pakietów odpowiedzialne za zapewnienie
+        systemowi operacyjnemu pewnej funkcjonalności np. obsługi wirtualizacji
+        i maszyn wirtualnych. Grupy pakietów obsługuje się identycznie jak
+        pakiety indywidualne, możemy je wyświetlić, zainstalować, 
+        zaktualizować, wyświetlić informacje o nich oraz usunąć. Przjdziemy
+        sobie przez te wszystkie zagadnienia.
+      </p>
+      <h3 id="10.3.1.listsofgroups">10.3.1. Listy grup</h3>
+      <p>
+        Do obsługi grupy służy podpolecenie <em>group</em>, które posiada
+        kolejne znane nam już z obsługi pojedynczych pakietów podpolecenia
+        takie jak np <em>list</em>, którego zadaniem jest wyświetlenie grup
+        pakietów.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf group list
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 2:39:54 temu w dniu pon, 11 lip 2022, 08:36:18.
+Dostępne grupy środowisk:
+   Server
+   Minimalna instalacja
+   Workstation
+   Custom Operating System
+   Gospodarz wirtualizacji
+Zainstalowane grupy środowisk:
+   Serwer z graficznym interfejsem użytkownika
+Zainstalowane grupy:
+   Container Management
+   Headless Management
+Dostępne grupy:
+   Zgodność z przestarzałym systemem UNIX
+   Narzędzia programistyczne
+   .NET Core Development
+   Graficzne narzędzia administracyjne
+   Serwery sieciowe
+   RPM Development Tools
+   Obsługa aplikacji naukowych
+   Narzędzia bezpieczeństwa
+   Obsługa smart card
+   Narzędzia systemowe
+</pre>
+      <p>
+        Jak możemy zawuważyć grupy dzielą się dwa rodzaje pierwszym z nich są
+        <code class="code-inline">grupy środowisk</code>, drugim są 
+        zwykłe grupy. Z grupami mogliśmy się już spotkać podczas instalacji
+        systemu, wybieraliśmy rodzaj instalacji <em>Server with GUI</em>.
+        Podczas wyboru oprogramowania mogliśmy wybrać dowolną z nich do
+        zainstalowania. Teraz za pomocą <em>dnf</em> możemy doinstalować 
+        dodatkowe grupy lub usunąć nie potrzebne. Podpolecenie <em>list</em>
+        wyświetla również te obecnie zainstalowane oraz nie wyświetla 
+        wszystkich dostępnych w systemie grup. Wszystkie grupy będą wyświetlone
+        jeśli uzupełnimy nasze polecenie o modyfikator <em>--hidden</em>.
+        W ten sposób możemy wybrać znacznie węższą grupę pakietów. Możemy
+        również używać modyfikatorów takich jak <em>--installed</em> lub
+        <em>--available</em>
+      </p>
+      <p>
+        Po za taką długą lisą możemy wyświetlić podsumowanie, które zwróci
+        informacje o ilości dostępnych oraz zainstalowanych grup.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf group summary
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 3:08:10 temu w dniu pon, 11 lip 2022, 08:36:18.
+Zainstalowane grupy: 2
+Dostępne grupy: 10
+</pre>
+      <h3 id="10.3.2.infoaboutgroup">10.3.2. Informacje o grupie</h3>
+      <p>
+        Za wyświetlenie informacji o grupie odpowiedzialne jest podpolecenie
+        <em>info</em>, zwraca ono listę pakietów obowiązkowych, które muszą być
+        zainstalowane, aby system został rozszerzony o funkcjonalność 
+        przypisaną grupie oraz listę pakietów opcjonalnych.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf group info "Platforma wirtualizacji"
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 2:58:21 temu w dniu pon, 11 lip 2022, 08:36:18.
+
+Grupa: Platforma wirtualizacji
+ Opis: Dostarcza interfejs do uzyskiwania dostępu i kontrolowania wirtualizowanych gości i kontenerów.
+ Pakiety obowiązkowe:
+   libvirt
+   libvirt-client
+   virt-who
+ Pakiety opcjonalne:
+   fence-virtd-libvirt
+   fence-virtd-multicast
+   fence-virtd-serial
+   perl-Sys-Virt
+</pre>
+      <h3 id="10.3.3.instalationofgroup">10.3.3. Instalacja grup</h3>
+      <p>
+        Instalacja grup odbywa się na tej samej zasadzie, z drobnym wyjątkiem.
+        Otóż jeśli w systemie będą występować jakieś składniki grupy, to
+        jeśli będzie taka możliwość zostaną one zaktualizowane. Instalacja
+        grupy odbywa się za pomocą podpolecenia <em>install</em> podpolecenia
+        <em>group</em>. Jako argument podajemy nazwę grupy.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf group install "Obsługa smart card"
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 3:37:36 temu w dniu pon, 11 lip 2022, 08:36:18.
+Rozwiązano zależności.
+================================================================================
+ Pakiet               Architektura Wersja                 Repozytorium    Rozm.
+================================================================================
+Instalowanie pakietów grupy/modułu:
+ esc                  x86_64       1.1.2-22.el8_4         AppStream       180 k
+ pcsc-lite-ccid       x86_64       1.4.29-5.1.el8_4       BaseOS          316 k
+Instalowanie zależności:
+ opensc               x86_64       0.20.0-4.el8           BaseOS          1.3 M
+ pcsc-lite            x86_64       1.9.5-1.el8            BaseOS          110 k
+ pcsc-lite-libs       x86_64       1.9.5-1.el8            BaseOS           43 k
+Instalowanie grup:
+ Smart Card Support                                                            
+
+Podsumowanie transakcji
+================================================================================
+Instalacja  5 pakietów
+
+Całkowity rozmiar: 1.9 M
+Rozmiar po zainstalowaniu: 6.0 M
+W porządku? [t/N]: t
+Pobieranie pakietów:
+Wykonywanie sprawdzania transakcji
+Pomyślnie ukończono sprawdzanie transakcji.
+Wykonywanie testu transakcji
+Pomyślnie ukończono test transakcji.
+Wykonywanie transakcji
+  Przygotowywanie                :                                          1/1 
+  Instalowanie                   : pcsc-lite-libs-1.9.5-1.el8.x86_64        1/5 
+  Wykonywanie skryptu            : pcsc-lite-libs-1.9.5-1.el8.x86_64        1/5 
+  Instalowanie                   : pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   2/5 
+  Wykonywanie skryptu            : pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   2/5 
+  Instalowanie                   : pcsc-lite-1.9.5-1.el8.x86_64             3/5 
+  Wykonywanie skryptu            : pcsc-lite-1.9.5-1.el8.x86_64             3/5 
+  Instalowanie                   : opensc-0.20.0-4.el8.x86_64               4/5 
+  Wykonywanie skryptu            : opensc-0.20.0-4.el8.x86_64               4/5 
+  Instalowanie                   : esc-1.1.2-22.el8_4.x86_64                5/5 
+  Wykonywanie skryptu            : esc-1.1.2-22.el8_4.x86_64                5/5 
+  Sprawdzanie                    : opensc-0.20.0-4.el8.x86_64               1/5 
+  Sprawdzanie                    : pcsc-lite-1.9.5-1.el8.x86_64             2/5 
+  Sprawdzanie                    : pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   3/5 
+  Sprawdzanie                    : pcsc-lite-libs-1.9.5-1.el8.x86_64        4/5 
+  Sprawdzanie                    : esc-1.1.2-22.el8_4.x86_64                5/5 
+Installed products updated.
+
+Zainstalowano:
+  esc-1.1.2-22.el8_4.x86_64            opensc-0.20.0-4.el8.x86_64               
+  pcsc-lite-1.9.5-1.el8.x86_64         pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   
+  pcsc-lite-libs-1.9.5-1.el8.x86_64   
+
+Ukończono.
+</pre>
+      <p>
+        <em>Dnf</em> zainstalował w moim przypadku grupę pakietów
+        odpowiedzialną za obsługę kart inteligentych.
+      </p>
+      <h3 id="10.3.4.groupupdate">10.3.4. Aktualizacja grupy</h3>
+      <p>
+        Aktualizacja grupy różni się podaniem innego podpolecenia. Zamiast
+        <em>install</em> podajemy <em>update</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf group update "Obsługa smart card"
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 3:47:16 temu w dniu pon, 11 lip 2022, 08:36:18.
+Rozwiązano zależności.
+================================================================================
+ Pakiet            Architektura     Wersja              Repozytorium      Rozm.
+================================================================================
+Aktualizowanie grup:
+ Smart Card Support
+                                                                               
+
+Podsumowanie transakcji
+================================================================================
+
+W porządku? [t/N]: t
+Ukończono.
+</pre>
+      <h3 id="10.3.5.removethegroup">10.3.5. Usuwanie grupy</h3>
+      <p>
+        Tak samo jak w przypadku pojedynczych pakietów, możemy usunąć i grupy.
+        Do usunięcia grupy potrzebne będzie podpolecenie <em>remove</em> oraz
+        nazwa grupy. 
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf group remove "Obsługa smart card"
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Rozwiązano zależności.
+================================================================================
+ Pakiet              Arch.       Wersja                   Repozytorium    Rozm.
+================================================================================
+Usuwanie:
+ esc                 x86_64      1.1.2-22.el8_4           @AppStream      516 k
+ pcsc-lite-ccid      x86_64      1.4.29-5.1.el8_4         @BaseOS         1.4 M
+Usuwanie nieużywanych zależności:
+ opensc              x86_64      0.20.0-4.el8             @BaseOS         3.8 M
+ pcsc-lite           x86_64      1.9.5-1.el8              @BaseOS         218 k
+ pcsc-lite-libs      x86_64      1.9.5-1.el8              @BaseOS          50 k
+Usuwanie grup:
+ Smart Card Support                                                            
+
+Podsumowanie transakcji
+================================================================================
+Usunięcie  5 pakietów
+
+Zwolnione miejsce: 6.0 M
+W porządku? [t/N]: t
+Wykonywanie sprawdzania transakcji
+Pomyślnie ukończono sprawdzanie transakcji.
+Wykonywanie testu transakcji
+Pomyślnie ukończono test transakcji.
+Wykonywanie transakcji
+  Przygotowywanie                :                                          1/1 
+  Wykonywanie skryptu            : esc-1.1.2-22.el8_4.x86_64                1/1 
+  Usuwanie                       : esc-1.1.2-22.el8_4.x86_64                1/5 
+  Usuwanie                       : opensc-0.20.0-4.el8.x86_64               2/5 
+  Wykonywanie skryptu            : opensc-0.20.0-4.el8.x86_64               2/5 
+  Wykonywanie skryptu            : pcsc-lite-1.9.5-1.el8.x86_64             3/5 
+  Usuwanie                       : pcsc-lite-1.9.5-1.el8.x86_64             3/5 
+  Wykonywanie skryptu            : pcsc-lite-1.9.5-1.el8.x86_64             3/5 
+  Usuwanie                       : pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   4/5 
+  Wykonywanie skryptu            : pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   4/5 
+  Usuwanie                       : pcsc-lite-libs-1.9.5-1.el8.x86_64        5/5 
+  Wykonywanie skryptu            : pcsc-lite-libs-1.9.5-1.el8.x86_64        5/5 
+  Sprawdzanie                    : esc-1.1.2-22.el8_4.x86_64                1/5 
+  Sprawdzanie                    : opensc-0.20.0-4.el8.x86_64               2/5 
+  Sprawdzanie                    : pcsc-lite-1.9.5-1.el8.x86_64             3/5 
+  Sprawdzanie                    : pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   4/5 
+  Sprawdzanie                    : pcsc-lite-libs-1.9.5-1.el8.x86_64        5/5 
+Installed products updated.
+
+Usunięto:
+  esc-1.1.2-22.el8_4.x86_64            opensc-0.20.0-4.el8.x86_64               
+  pcsc-lite-1.9.5-1.el8.x86_64         pcsc-lite-ccid-1.4.29-5.1.el8_4.x86_64   
+  pcsc-lite-libs-1.9.5-1.el8.x86_64   
+
+Ukończono.
+</pre>
+      <p>
+        Po wykonaniu tej czynności grupa została usunięta z systemu.
+      </p>
+      <h2 id="10.4.modulesmanaging">10.4. Zarządzanie modułami pakietów</h2>
+      <p>
+        Moduły to bardziej rozległe pakiety zawierające nie tylko samą
+        aplikacje ale także jej całe środowisko do działania. Moduły
+        posiadają strumienie, które są odrębnym zestawem pakietów przygotowanym
+        z myslą o konkretnej wersji dostarczanego przez moduł programu. Każdy
+        z modułów posiada jeszcze profil, który określa podzbiór pakietów
+        przygotowany z myślą o przeznaczeniu aplikacji. Aby skorzystać z pewnej
+        jej funkcji nie trzeba instalować gigabajtów pakietów. Do obsługi
+        modułów wykorzystuje się podpolecenie <strong>module</strong>, a pracę 
+        z nimi rozpoczeniemy od wyświetlenia listy modułów.
+      </p>
+      <h3 id="10.4.1.listingmodules">10.4.1. Wyświetlanie modułów</h3>
+      <p>
+        Do wyświetlania list modułów służy podpolecenie <em>list</em>. Na 
+        poniższym przykładzie znajduje się fragment listy dostępnych w lokalnym 
+        repozytorium modułów.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module list
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 0:12:51 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name                 Stream          Profiles Summary                                      
+389-ds               1.4                      389 Directory Server (base)                  
+ant                  1.10 [d]        common [d] Java build tool                              
+container-tools      rhel8 [d][e]    common [d] Most recent (rolling) versions of podman, bui
+                                                ldah, skopeo, runc, conmon, runc, conmon, CRI
+                                                U, Udica, etc as well as dependencies such as
+                                                container-selinux built and tested together,
+                                                and updated as frequently as every 12 weeks.
+...
+</pre>
+      <p>
+        Modułów dostępnych w systemie jest kilkadziesiąt. Wyświetlenie listy
+        nie posiada zbyt poręcznego formatu, aby zmieszczać pełny listing tego
+        polecenia. Tak jak w przypadku pozostałych elementów, możemy podać
+        podpoleceniu <em>list</em> argument w postaci ogólnej nazwy np. 
+        <em>php</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module list php
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 0:17:20 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name         Stream         Profiles                          Summary                      
+php          7.2 [d]        common [d], devel, minimal        PHP scripting language       
+php          7.3            common [d], devel, minimal        PHP scripting language       
+php          7.4            common [d], devel, minimal        PHP scripting language       
+php          8.0            common [d], devel, minimal        PHP scripting language       
+
+Wskazówka: [d]omyślne, [e]włączone, [x]wyłączone, [i]zainstalowane
+</pre>
+      <p>
+        Jak możemy zauważyć na powyższym przykładzie do dyspozycji mamy kilka
+        strumieni. Domyślnym strumieniem jest 
+        <code class="code-inline">7.2</code>, a domyślnym profilem dla tych
+        strumieni jest <code class="code-inline">common</code>. Domyślny
+        strumień oraz profil zostanie wybrany w momencie gdy nie sprecyzujemy
+        tego podczas instalacji. W ostatniej linii znajduje się legenda, litery
+        w nawiasach kwadartowych zdradzają stan modułu zainstalowanego w
+        systemie. Za pomocą modyfikatora <em>--enabled</em> możemy wyświetlić 
+        wszystkie włączone strumienie modułów.
+      </p>
+      <h3 id="10.4.2.infoaboumodule">10.4.2. Informacje na temat modułu</h3>
+      <p>
+        Za pomocą podpolecenia <em>info</em> możemy wyświetlić na przykład
+        jakie pakiety zawiera moduł. Podczas wyświetlania tego typu informacji
+        warto podać interesujący nas strumień, aby zmniejszyć ilość
+        generowanych danych. Strumień podajemy wraz z nazwą modułu oddzielając
+        go dwukropkiem.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module info php:7.2
+[sudo] hasło użytkownika user: 
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 0:47:02 temu w dniu pon, 11 lip 2022, 12:31:38.
+Name             : php
+Stream           : 7.2 [d][a]
+Version          : 8020020191108065827
+Context          : 2c7ca891
+Architecture     : x86_64
+Profiles         : common [d], devel, minimal
+Default profiles : common
+Repo             : AppStream
+Summary          : PHP scripting language
+Description      : php 7.2 module
+Requires         : httpd:[2.4]
+                 : nginx:[]
+                 : platform:[el8]
+Artifacts        : apcu-panel-0:5.1.12-2.module+el8.1.0+3202+af5476b9.noarch
+                 : libzip-0:1.5.1-2.module+el8.1.0+3202+af5476b9.src
+                 : libzip-0:1.5.1-2.module+el8.1.0+3202+af5476b9.x86_64
+                 : libzip-debuginfo-0:1.5.1-2.module+el8.1.0+3202+af5476b9.x86_64
+                 : libzip-debugsource-0:1.5.1-2.module+el8.1.0+3202+af5476b9.x86_64
+                 : libzip-devel-0:1.5.1-2.module+el8.1.0+3202+af5476b9.x86_64
+                 : libzip-tools-0:1.5.1-2.module+el8.1.0+3202+af5476b9.x86_64
+                 : libzip-tools-debuginfo-0:1.5.1-2.module+el8.1.0+3202+af5476b9.x86_64
+                 : php-0:7.2.24-1.module+el8.2.0+4601+7c76a223.src
+                 : php-0:7.2.24-1.module+el8.2.0+4601+7c76a223.x86_64
+                 : php-bcmath-0:7.2.24-1.module+el8.2.0+4601+7c76a223.x86_64
+...
+</pre>
+      <p>
+        Lista pakietów występuje w wierszu 
+        <code class="code-inline">Artifacts</code>.
+      </p>
+      <h3 id="10.4.3.moduleinstallation">10.4.3. Instalacja modułów</h3>
+      <p>
+        Instalacja modułów wygląda podobnie do instalacji takich elementów jak
+        grupy czy pojedyńcze pakiety, używamy podpolecenia <em>install</em>
+        podpolecenia przeznaczonego do obsługi tego elementu. Podając moduł
+        możemy równocześnie wybrać zarówno strumień jak i profil korzystając
+        ze składni: <code class="code-inline">moduł:strumień/profil</code>.
+        Dla przykładu zainstaluje moduł języka <em>perl</em> w domyślnym
+        strumieniu oraz domyślnym profilu. Nie będe zmieszczał tutaj
+        informacji zwracanej przez polecenie, ponieważ jest to moduł, który
+        zawiera ponad 100 pakietów.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module install perl
+</pre>
+      <p>
+        Za pomocą podpolecenia <em>list</em> sprawdzimy jak wygląda na liście
+        zainstalowany przed chwilą w systemie moduł.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module list perl
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:17:20 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name    Stream         Profiles                  Summary                                   
+perl    5.24           common [d], minimal       Practical Extraction and Report Language  
+perl    5.26 [d][e]    common [d] [i], minimal   Practical Extraction and Report Language  
+perl    5.30           common [d], minimal       Practical Extraction and Report Language  
+perl    5.32           common [d], minimal       Practical Extraction and Report Language  
+
+Wskazówka: [d]omyślne, [e]włączone, [x]wyłączone, [i]zainstalowane
+</pre>
+      <p>
+        Na powyższym przykładzie możemy zobaczyć, że po zainstalowaniu
+        modułu <em>perl</em> z domyślnym strumienie oraz domyślnym profilem.
+        Strumień <code class="code-inline">5.26</code> został włączony a 
+        profil <code class="code-inline">common</code> został zainstalowany. 
+        Warto też dodać, że jeśli jakiś z komponentów był już zainstalowany to
+        podczas instalacji modułu zostanie sprawdzony czy nie wymaga 
+        aktualizacji.
+      </p>
+      <h3 id="10.4.4.moduleupdates">10.4.4. Aktualizacja modułu</h3>
+      <p>
+        Aktualizacji modułu, dokonuje tak samo jak aktualizacji grupy czy 
+        pojedynczego pakietu za pomocą podpolecenia <em>update</em>, tylko, że
+        tym przypadku będzie to podpolecenie podpolecenia <em>module</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module update perl -y
+</pre>
+      <p>
+        W tym przypadku użyłem flagi <code class="code-inline">-y</code>, która
+        automatycznie potwierdza wykonanie czynności. <em>Dnf</em> nie będzie
+        nas o nic pytać.
+      </p>
+      <h3 id="10.4.5.removethemodule">10.4.5. Usuwanie modułu</h3>
+      <p>
+        Usuwanie modułów wymaga już dwóch czynności piersza klasyczna
+        wykonywana również na innych elementach. Drugą czynnością jest
+        przywrócenie modułu wykonywane za pomocą podpolecenia <em>reset</em>.
+        Usuniemy teraz moduł <em>perl</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module update perl -y
+</pre>
+      <p>
+        Wydałem powyższe polecenie a następnie sprawdziłem jak wygląda lista
+        stumieni modułu <em>perl</em> za pomocą poniższego polecenia.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module list perl
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:54:15 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name     Stream          Profiles               Summary                                    
+perl     5.24            common [d], minimal    Practical Extraction and Report Language   
+perl     5.26 [d][e]     common [d], minimal    Practical Extraction and Report Language   
+perl     5.30            common [d], minimal    Practical Extraction and Report Language   
+perl     5.32            common [d], minimal    Practical Extraction and Report Language   
+
+Wskazówka: [d]omyślne, [e]włączone, [x]wyłączone, [i]zainstalowane
+</pre>
+      <p>
+        Jak widzimy ten strumień jest nadal włączony mimo, iż domyślny profil
+        został odinstalowany. Dlatego też musimy przywrócić moduł.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module reset perl -y
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:58:36 temu w dniu pon, 11 lip 2022, 12:31:38.
+Rozwiązano zależności.
+===========================================================================================
+ Pakiet               Architektura        Wersja                Repozytorium         Rozm.
+===========================================================================================
+Przywracanie modułów:
+ perl                                                                                     
+
+Podsumowanie transakcji
+===========================================================================================
+
+Ukończono.
+
+[user@rhel8-vm1 ~]$ sudo dnf module list perl:5.26
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 1:59:21 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name      Stream       Profiles                Summary                                     
+perl      5.26 [d]     common [d], minimal     Practical Extraction and Report Language    
+
+Wskazówka: [d]omyślne, [e]włączone, [x]wyłączone, [i]zainstalowane
+</pre>
+      <p>
+        Na powyższym przykładzie przywróciłem moduł i sprawdziłem jak wygląda
+        jego status w systemie. Teraz strumień nie jest włączony.
+      </p>
+      <h3 id="10.4.6.swichingstreams">10.4.6. Przełączanie się miedzy strumieniami</h3>
+      <p>
+        Załóżmy taką sytuacje, że musimy zmień wersję <em>php</em> na serwerze
+        z najnowszej (8.0) na niższą. Aby to zrobić musimy przełączyć się
+        między strumieniami. Niestety nie ma lepszej metody niż ta opisana
+        tutaj.
+      </p>
+      <p>
+        Na początku musimy przeprowadzić klasyczne usunięcie modułu, tak jak
+        we wcześniejszym podrozdziale, ale na początku wyświetlimy sobie listę 
+        modułów <em>php</em>.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module list php
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 2:26:58 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name        Stream        Profiles                             Summary                     
+php         7.2 [d]       common [d], devel, minimal           PHP scripting language      
+php         7.3           common [d], devel, minimal           PHP scripting language      
+php         7.4           common [d], devel, minimal           PHP scripting language      
+php         8.0 [e]       common [d] [i], devel, minimal       PHP scripting language      
+
+Wskazówka: [d]omyślne, [e]włączone, [x]wyłączone, [i]zainstalowane
+
+[user@rhel8-vm1 ~]$ sudo dnf module remove php:8.0 -y
+[user@rhel8-vm1 ~]$ sudo dnf module reset php:8.0
+</pre>
+      <p>
+        Następnie instalujemy nowy strumień modułu z dodatkową opcją
+        pozwalającą na usunięcie pakietów, aby rozwiązać zależności.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module install php:7.4 --allowerasing -y
+</pre>
+      <p>
+        Przełączenie gotowe. Teraz możemy to zweryfikować. Wyświetlając jeszcze
+        raz listę modułów.
+      </p>
+<pre class="code-block">
+[user@rhel8-vm1 ~]$ sudo dnf module list php
+Updating Subscription Management repositories.
+Unable to read consumer identity
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Ostatnio sprawdzono ważność metadanych: 2:30:25 temu w dniu pon, 11 lip 2022, 12:31:38.
+AppStream
+Name        Stream        Profiles                             Summary                     
+php         7.2 [d]       common [d], devel, minimal           PHP scripting language      
+php         7.3           common [d], devel, minimal           PHP scripting language      
+php         7.4 [e]       common [d] [i], devel, minimal       PHP scripting language      
+php         8.0           common [d], devel, minimal           PHP scripting language      
+
+Wskazówka: [d]omyślne, [e]włączone, [x]wyłączone, [i]zainstalowane
+</pre>
+      <h3 id="exec10.1">Ćwiczenie 1: Konfiguracja dostępu do repozytorium</h3>
+      <p>
+        Na maszynie <em>server1</em> z <strong>RHEL 9</strong> skonfiguruj
+        dostęp do lokalnego repozytorium wykorzystując do tego płyte/obraz
+        płyty z RHEL 9. Plik nazwij <em>local.repo</em>. Uwaga, repozytorium
+        musi być dostępne odrazu po ponownym uruchomioniu maszyny. 
+      </p>
+      <h3 id="exec10.2">Ćwiczenie 2: Instalacja i zarządzanie pojedynczymi pakietami</h3>
+      <p>
+        Na maszynie z <strong>RHEL 8</strong> wykorzystując użytkownika z
+        możliwością podniesienia uprawnień, użyj polecenia <em>dnf</em> do
+        wyświetlenia oddzielnie pakietów możliwych do instalacji oraz 
+        pakietów zainstalowanych. Zainstaluj pakiet <em>httpd</em>, potwierdź
+        tę czynność wyświetlając plik dziennika <em>/var/log/dnf.log</em>.
+        Wyświetl informacje na temat pakietu <em>httpd</em>, pokaż jego
+        zależności, na koniec usuń go.
+      </p>
+      <h3 id="exec10.3">Ćwiczenie 3: Instalacja i zarządzanie grupami pakietów</h3>
+      <p>
+        Na maszynie z <strong>RHEL 8</strong> wykorzystując użytkownika z
+        możliwością podniesienia uprawnień, użyj polecenia <em>dnf</em> do
+        wyświetlenia zainstalowanych i możliwych do zainstalowania grup.
+        Zainstaluj grupę "Security Tools" i "Scientific Support". Potwierdź to
+        wyświetlając plik dziennika narzędzia. Pokaż pakiety zawarte w grupie
+        "Scientific Support", a następnie usuń tę grupę.
+      </p>
+      <h3 id="exec10.4">Ćwiczenie 4: Instalacja i zarządzanie modułami</h3>
+      <p>
+        Na maszynie z <strong>RHEL 8</strong> wykorzystując użytkownika z
+        możliwością podniesienia uprawnień, użyj polecenia <em>dnf</em> do
+        wyświetlenia listy modułów w systemie. Zainstaluj php w domyślnym
+        strumieniu o profilu rozwojowym. Zweryfikuj instalacje, następnie
+        usuń moduł.
+      </p>
+      <h3 id="exec10.5">Ćwiczenie 5: Przełączanie się miedzy strumieniami.</h3>
+      <p>
+        Na maszynie z <strong>RHEL 8</strong> wykorzystując użytkownika z
+        możliwością podniesienia uprawnień, użyj polecenia <em>dnf</em> do
+        zainstalowania modułu <em>postgresql</em>, w domyslnym strumieniu i
+        domyślnym profilu. Następnie dokonaj przełączenia między strumieniami
+        na starszą wersję o profilu klienta.
+      </p>
+      <h2 id="ch10summary">Podsumowanie</h2>
+      <p>
+        Tym rodziałem zakończyliśmy zarządzanie pakietami. Ten rodział
+        pokazał nam jak zarządzać pakietami za pomocą bardziej zaawansowanego
+        narzędzia jakim jest <em>dnf</em>. Nauczyliśmy się zarządać 
+        pojednyczymi
+        pakietami, grupami oraz modułami. W następnym rodziale zajmiemy się
+        uruchamianiem systemu operacyjnego.
+      </p>

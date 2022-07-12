@@ -1,0 +1,471 @@
+      <h1 id="9.rpmbasics">9. Podstawy zarządzania pakietami oprogramowania</h1>
+      <p>
+        Pakiety inaczej zwane paczkami czy ogólnie oprogramowanie dystrybucji,
+        to archiwa przechowywujące zazwyczaj skompilowane oprogramowanie
+        przeznaczone dla systemu, który używamy. Wewnątrz pakietów znajduje się
+        cała strukturktura katalogowa z plikami pakietu, tak by podczas
+        instalacji wystarczyło je tylko rozpakować; znajdują się również
+        metadane zawierające informacje o pakiecie. 
+      </p>
+      <p>
+        Większość pakietów posiada długie nazwy, które nie są dokońca
+        rozumiałe. Weźmy na przykład taką nazwę jak:
+<pre class="code-block">
+openssl-1.1.1-8.el8.x86_64.rpm
+</pre>
+        Zawiera ona takie elementy jak:
+      </p>
+      <ul>
+        <li>Jednoznaczną nazwę oprogramowania pozwalającą, zidentyfikować
+          co to za program.</li>
+        <li>Numer wersji oprogramowania.</li>
+        <li>Numer wydania.</li>
+        <li>Nazwę dystrybucji, rodziny dystrybucji itp. Ten element nie jest
+          obligatoryjny. Nie które dystrybucje włączają go do numeru wydania.
+        </li>
+        <li>Nazwa architektury dla jakiej zostało skompilowane oprogramowanie.</li> 
+        <li>Rozszerzenie w tym przypadku jest <em>RPM</em>.</li>
+      </ul>
+      <p>
+        Kompilacja programów ze źródeł wymaga odpowiedniego środowiska (w ten
+        sposób tworzy się binarne wersje programów udostępnionych w pakietach).
+        Aby oprogramowanie z pakietu mogło działać tak samo, jak na w systemie,
+        w którym zostało skompilowane wymaga identycznego środowiska. To
+        środowisko jest przedstawiane za pomocą 
+        <strong>zależności pakietu</strong>, czyli wszystkich innych pakietów,
+        wymaganych do działania tego programu, który chcemy
+        zainstalować. Informacje o zależnościach znajdują się w metadanych
+        pakietu.
+      </p>
+      <p>
+        Systemy, których dystrybucja oprogramowania jest oparta o pakiety musi
+        posiadać bazę danych pakietów. W przypadku <em>RHEL</em> znajduje się
+        ona w katalogu <em>/var/lib/rpm</em>. Na podstawie danych umieszczonych
+        w tym katalogu oprogramowanie do zarządzania pakietami pobiera
+        informacje o zainstalowanym w systemie oprogramowniu. 
+      </p>
+      <p>
+        Aby móc zarządzać pakietami potrzebne jest do tego odpowiednie
+        programy. Red Hat posiada takie polecenie jak 
+        <strong>rpm</strong> (ang. <em>Red Hat Packet Manager</em>) i jest to
+        podstawowe narzędzie do instalacji, aktualizacji, wyszukiwania
+        informacji czy usuwania oprogramowania z systemu. <em>Rpm</em> jest
+        bardzo prostym narzędziem jednak posiada jedną wadę, otóż
+        nie rozwiązuje samodzielnie zależności. Dlatego też pojawił
+        się taki program jak <strong>yum</strong>, który pełni takie same
+        role jak <em>rpm</em> jednak nie posiada wspomnianej wady. Od wersji
+        8 <em>RHEL</em>, <em>yum</em> został zastąpiony przez
+        <strong>dnf</strong>, który rozszerza funkcjonalność <em>yum</em>.
+        W tym rodziale zajmiemy się wyłącznie <em>rpm</em>. W następnym
+        zaś skupimy się na <em>dnf</em>.
+      </p>
+      <h2 id="9.1.rpm">9.1. Red Hat Packet Manager - RPM</h2>
+      <h3 id="9.1.1.gettinginfo">9.1.1. Pobieranie danych z pakietu</h3>
+      <p>
+        Jedną z podstawowych czynności jakie możemy wykonać przy użyciu tego 
+        narzędzia
+        jest pobieranie informacji o pakietach, za pomocą opcji <em>-q</em>
+        podając jako argument nazwę programu możemy dowiedzić się czy takowy
+        jest zainstalowany w systemie.
+      </p> 
+<pre class="code-inline">
+[user@server1 ~]$ rpm -q zsh
+package zsh is not installed
+[user@server1 ~]$ rpm -q bash
+bash-5.1.8-4.el9.x86_64
+</pre>
+      <p>
+        Pakiet <code class="code-inline">zsh</code> nie jest zainstalowany
+        w moim systemie. Natomiast drugie wywołanie potwierdza, że systemie
+        zainstalowano powłokę <em>BASH</em>. 
+      </p>
+      <p>
+        Z racji tego, iż <em>rpm</em> to nie tylko narzędzie ale i format
+        danych za pomocą tego polecenia, możemy wyświetlić pliki konfiguracyjne
+        programu (<em>-qc</em>), który zawiera pakiet czy pliki dokumentacji 
+        (<em>-qd</em>).
+      </p> 
+<pre class="code-inline">
+#Plik dokumentacji:
+[user@server1 ~]$ rpm -qd bash
+/usr/share/doc/bash/FAQ
+/usr/share/doc/bash/INTRO
+/usr/share/doc/bash/RBASH
+/usr/share/doc/bash/README
+/usr/share/doc/bash/bash.html
+/usr/share/doc/bash/bashref.html
+...
+
+#Pliki konfiguracji:
+[user@server1 ~]$ rpm -qc bash
+/etc/skel/.bash_logout
+/etc/skel/.bash_profile
+/etc/skel/.bashrc
+</pre>
+      <p>
+        Wszysktie pliki pakietu możemy wyświetlić za pomocą opcji <em>-ql</em>.
+        Generalnie opcja <em>-q</em>, jest modyfikatorem odpowiedzialnym za
+        pobieranie danych z bazy danych lub z samego pliku pakietu.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpm -ql bash
+/etc/skel/.bash_logout
+/etc/skel/.bash_profile
+/etc/skel/.bashrc
+/usr/bin/alias
+/usr/bin/bash
+/usr/bin/bashbug
+/usr/bin/bashbug-64
+/usr/bin/bg
+/usr/bin/cd
+...
+</pre>
+      <p>
+        Za pomocą opcji <em>-qf</em> możemy wyszukać pakietu, z którego
+        pochodzi podany plik.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpm -qf /etc/bashrc
+setup-2.13.7-6.el9.noarch
+</pre>
+      <p>
+        Polecenie zwróci nazwę pakietu. Zwróćmy uwagę na to, że nazwy
+        zainstalowanych pakietów w <em>RHEL</em> różnią się od nazw plików
+        tym, że nie posidają rozszerzenia. Jeśli nie wiemy czym jest ten pakiet
+        przedstawiowny na poprzednim przykładzie za pomocą opcji <em>-qi</em>
+        możemy sprawdzić do czego służy. 
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpm -qi setup-2.13.7-6.el9.noarch
+Name        : setup
+Version     : 2.13.7
+Release     : 6.el9
+Architecture: noarch
+Install Date: Sun 26 Jun 2022 01:48:46 PM CEST
+Group       : System Environment/Base
+Size        : 726478
+License     : Public Domain
+Signature   : RSA/SHA256, Sat 20 Nov 2021 04:26:39 PM CET, Key ID 199e2f91fd431d51
+Source RPM  : setup-2.13.7-6.el9.src.rpm
+Build Date  : Tue 10 Aug 2021 06:16:15 PM CEST
+Build Host  : ppc64le-03.build.eng.rdu2.redhat.com
+Packager    : Red Hat, Inc. &lt;http://bugzilla.redhat.com/bugzilla&gt;
+Vendor      : Red Hat, Inc.
+URL         : https://pagure.io/setup/
+Summary     : A set of system configuration and setup files
+Description :
+The setup package contains a set of important system configuration and
+setup files, such as passwd, group, and profile.
+</pre>
+      <p>
+        Przed przejściem do kolejnego zaganienia musimy umieścić płytę
+        instalacjyną z <em>RHEL</em> w napędzie maszyny. Z niej będziemy
+        pobierać pakiety do dalszych ćwiczeń, gdyż nasze maszyny nie są
+        podłączone do sieci Red Hat. Po włożeniu płyty do napędu dodajmy 
+        poniższy wpis do
+        pliku <em>/etc/fstab</em>, aby płyta posiadała prosty i stały punkt
+        montowania. Na płycie znajdują się dwa katalogi <em>BaseOS/Packages</em>
+        oraz <em>AppStream/Packages</em>, gdzie znajdują się pakiety.
+      </p>
+<pre class="code-block">
+/dev/sr0  /mnt  iso9660 ro  0 0
+</pre>
+      <p>
+        Po zapisaniu zmian w pliku wywołujemy polecenie
+        <code class="code-inline">sudo mount -a</code>, aby zamontować płytę
+        w podkatalogu <em>/mnt</em>. Kiedy płyta jest już zamontowana w
+        systemie, możemy wyświetlić informacje z metadanych pliku pakietu za 
+        pomocą opcji <em>-qip</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpm -qip /mnt/BaseOS/Packages/bash-completion-2.11-4.el9.noarch.rpm 
+Name        : bash-completion
+Epoch       : 1
+Version     : 2.11
+Release     : 4.el9
+Architecture: noarch
+Install Date: (not installed)
+Group       : Unspecified
+Size        : 1057184
+License     : GPLv2+
+Signature   : RSA/SHA256, Sat 20 Nov 2021 11:52:53 AM CET, Key ID 199e2f91fd431d51
+Source RPM  : bash-completion-2.11-4.el9.src.rpm
+Build Date  : Mon 09 Aug 2021 09:47:13 PM CEST
+Build Host  : s390-070.build.eng.bos.redhat.com
+Packager    : Red Hat, Inc. &lt;http://bugzilla.redhat.com/bugzilla&gt;
+Vendor      : Red Hat, Inc.
+URL         : https://github.com/scop/bash-completion
+Summary     : Programmable completion for Bash
+Description :
+bash-completion is a collection of shell functions that take advantage
+of the programmable completion feature of bash.
+</pre>
+      <p>
+        Polecenie zwraca taką są ilość informacji jak polecenie <em>rpm</em>
+        wraz z opcją <em>-qi</em>.
+      </p>
+      <h3 id="9.1.2.checkingpkgs">9.1.2. Sprawdzanie pakietów</h3>
+      <p>
+        Za pomocą jednego z programów związanych z <em>rpm</em> oraz za pomocą 
+        samego polecenia <em>rpm</em> możemy sprawdzić poprawność oraz
+        wiarygodność pakietów, które zamierzamy zainstalować, jak i sprawdzić
+        co zostało zmienione przez nas w plikach programów, które są już 
+        zainstalowane w systemie względem oryginalnego pakietu.
+      </p>
+      <p>
+        Walidację pakietu, który mamy zainstalować możemy przeprowadzić
+        względem dwóch kryteriów, jednym z nich jest poprawność plików
+        znajdujących się w pakiecie. Ta metoda polega na sprawdzeniu sumy
+        kontrolnej <em>MD5</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpmkeys -K /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm --nosignature
+/mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm: digests OK
+</pre>
+      <p>
+        Drugim krytetium jest wiarygodność. Każdy pakiet zawiera podpis
+        twórcy/dostawcy, w naszym przypadku jest to dostawca którym jest firma
+        Red Hat, ten podpis dokonywany jest za pomoca klucza kryptograficznego.
+        Część tego klucza odpowiedzialna za szyfrowanie danych jest instalowana
+        w naszym systemie i pozostaje do naszej dyspozycji. Poza omówią funkcją
+        ta część klucza może również pomoć nam sprawdzić czy pakiet który
+        pobraliśmy z internetu rzeczywiście został stworzony przez firmę
+        Red Hat, za nim zaczniemy używać klucza musimy go na początku
+        zaimportować, importu dokonujemy za pomocą polecenia poniżej, ścieżka
+        do klucza również znajduje się na przykładzie.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpmkeys --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release 
+</pre>
+      <p>
+        Import klucza, jak i sprawdzenie
+        wiargodności pakietów wymaga uprawnień administratora.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpmkeys -K /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm
+/mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm: digests signatures OK
+</pre>
+      <p>
+        Teraz polecenie sprawdziło nie tylko poprawność plików 
+        (<code class="code-inline">digests</code>), ale także ich wiarygodność
+        (<code class="code-inline">signatures</code>).
+      </p>
+      <p>
+        Za pomocą polecenia <em>rpm</em> możemy pakiety 
+        zainstalowane już w systemie
+        pod kątem zmian względem plików znajdujących w oryginalnym pakiecie.
+        Służy temu opcja <em>-V</em>, jeśli nie ma żadnych zmian to polecenie
+        nic nie zwróci. Możemy oczywiście zwiększyć ilość komunikatów
+        generowanych podczas pracy programu z pomocą opcji <em>-v</em>, wówczas
+        polecenie zwróci informacje na temat każdego sprawdzonego pliku pakietu.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpm -V at
+[sudo] password for user: 
+.......T.  c /etc/at.deny
+</pre>
+      <p>
+        Informacja zwracana przez to polecenie składa się z trzech kolumn, w
+        pierwszej kolumnie znajdują się flagi, które mowią nam co uległo 
+        zmianie, każda z 9-ciu kropek to jedna flaga, w drugiej kolumnie 
+        znajdują się rodzaj pliku w tym przypadku 
+        <code class="code-inline">c</code>. Ostatnia kolumna zawiera ścieżke
+        bezwzględną do pliku. Poniżej znajdują sie listy z flagami oraz typami
+        plików. Kolejność na liście z flagami oznacza konkretną kropkę.
+      </p> 
+      <ol>
+        <li><strong>S</strong> - różnica w wielkości pliku,</li>
+        <li><strong>M</strong> - różnica w uprawnieniach,</li>
+        <li><strong>5</strong> - różnica w sumie kontrolnej pliku,</li>
+        <li><strong>D</strong> - różnica w numerze głównym i pobocznym 
+          urządzenia, urządzenie zostało zmienione,</li>
+        <li><strong>L</strong> - zmieniona ścieżka dowiązania symbolicznego,</li>
+        <li><strong>U</strong> - zmieniony właściciel pliku,</li>
+        <li><strong>G</strong> - zmieniona grupa pliku,</li>
+        <li><strong>T</strong> - różnica w czasie modyfikacji,</li>
+        <li><strong>P</strong> - różnica w <em>POSIX Capabilities</em></li>
+      </ol>
+      <p>
+        Kropka (<strong>.</strong>) oznacza brak zmian. Poniżej znajduje się
+        lista zawierająca typy plików. 
+      </p>
+      <ul>
+        <li><strong>c</strong> - <em>%config</em> - pliki konfiguracyjne,</li>
+        <li><strong>d</strong> - <em>%docs</em> - pliki dokumentacji,</li>
+        <li><strong>g</strong> - <em>%ghost</em> - pliki, których zawartość
+          nie znajduje się wewnątrz pakietu,</li> 
+        <li><strong>l</strong> - <em>%license</em> - pliki licencji,</li>
+        <li><strong>r</strong> - <em>%readme</em> - plik README.</li>
+      </ul>
+      <h3 id="9.1.3.installation">9.1.3. Instalacja i reinstalacja</h3>
+      <p>
+        Aby jak najlepiej wykorzystać polecenie <em>rpm</em> do instalacji
+        pakietów wykorzystuje się trzy opcje: <em>-i</em> - oznaczającą samą
+        instalacje pakietu, <em>-v</em> - zwiększającą ilość generowanych przez
+        polecenie komunikatów, <em>-h</em> - wyświetlająca pasek postępu w
+        postaci serii krzyżyków (<strong>#</strong>), po zapisaniu tych opcji
+        podajemy ścieżkę do pliku pakietu. Uwaga, tutaj pojawia się omawiana
+        wcześniej wada: brak rozwiązywania zależność, jeśli spróbujemy 
+        zainstalować jakiś pakiet, które zależności nie są rozwiązane
+        (spełnione), <em>rpm</em> nie podejmie w ogóle instalacji, zwracają
+        błąd o niespełnionych zależnościach. Na przykładzie poniżej znajduje
+        się instalacja powłoki <em>zsh</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpm -ivh /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm 
+[sudo] password for user: 
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:zsh-5.8-9.el9                    ################################# [100%]
+</pre>
+      <p>
+        Teraz powłoka <em>zsh</em> jest zainstalowana w systemie. Pakiety
+        możemy również reinstalować podając po <em>-i</em> długą opcję
+        <em>--reinstall</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpm -i --reinstall -vh /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm 
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:zsh-5.8-9.el9                    ################################# [ 50%]
+Cleaning up / removing...
+   2:zsh-5.8-9.el9                    ################################# [100%]
+</pre>
+      <h3 id="9.1.4.updates">9.1.4. Aktualizacje pakietów</h3>
+      <p>
+        Aktualizacji pakietu możemy dokonać na dwa sposoby, pierwszym z nich
+        jest aktualizacja przy użyciu opcji <em>-U</em>,
+        jeśli podany pakiet nie istnieje w systemie to zostanie on
+        automatycznie zainstalowany. Opcji <em>-U</em> używa się wraz innymi
+        opcjami instalacji <em>-v</em> oraz <em>-h</em>. Spróbujemy
+        zaktualizować naszą powłokę <em>zsh</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpm -Uvh /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm 
+[sudo] password for user: 
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+	package zsh-5.8-9.el9.x86_64 is already installed
+</pre>
+      <p>
+        W tym przykładzie użyłem tej samego pakietu do aktualizacji, co 
+        wygerowało monit o tym, że taki pakiet jest już zainstalowany w
+        systemie.
+      </p>
+      <p>
+        Inną opcją aktualizacji jest odświerzenie (ang. <em>freshening</em>),
+        ta metoda wymaga aby pakiet w starszej wersji był już zainstalowany
+        w systemie. Odświerzenie wymaga opcji <em>-F</em> i używa się jej
+        wraz z pozostałymi opcjami wymienionymi podczas instalacji oraz 
+        aktualizacji.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpm -Fvh /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm 
+[sudo] password for user: 
+</pre>
+      <p>
+        Polecenie nie zrobiło nic poniważ podałem ten sam pakiet, które jest
+        już zainstalowany.
+      </p>
+      <h3 id="9.1.5.erasing">9.1.5. Usuwanie pakietów</h3>
+      <p>
+        Do usuwania pakietów z systemu służy opcja <em>-e</em>, używa się jej
+        wraz z opcją <em>-v</em>, aby polecenie zróciło chociaż jakiś komunikat, 
+        po usunięciu pakietu. Poniżej znajdują się polecenia pokazujące 
+        usunięcie pakietu z systemu.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpm -q zsh
+zsh-5.8-9.el9.x86_64
+[user@server1 ~]$ sudo rpm -ev zsh
+Preparing packages...
+zsh-5.8-9.el9.x86_64
+[user@server1 ~]$ rpm -q zsh
+package zsh is not installed
+</pre>
+      <p>
+        Na podstawie informacji zwracanej przez ostatnie polecenie możemy
+        wywnioskować iż pakiet został usunięty.
+      </p>
+      <h3 id="9.1.6.miscs">9.1.6. Pozostałe czynności wykonywane na pakietach.</h3>
+      <p>
+        Do pozostałych czynności jakie możemy wykonać zaliczamy
+        <strong>nadpisanie pakietu</strong>. Jeśli podejrzewany, że mogły
+        wystąpić błędy podczas instalacji możemy nadpisać pakiety dodając do 
+        opcji instalacji długą opcję <em>--replacepkgs</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo rpm -ivh --replacepkgs /mnt/BaseOS/Packages/zsh-5.8-9.el9.x86_64.rpm 
+[sudo] password for user: 
+Verifying...                          ################################# [100%]
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:zsh-5.8-9.el9                    ################################# [100%]
+</pre>
+      <p>
+        Wynik działania nadpisania jest identyczny jak w przypadku instalacji.
+      </p>
+      <p>
+        Czasami może się zdarzyć taka potrzeba aby wyodrębnić jeden z plików
+        znajdujących wewnątrz pakietu, możemy wówczas taki pakiet rozpakować
+        do katalogu, a następnie przekopiować interesujące nas pliki.
+        Załóżmy że potrzebujemy pliku <em>/etc/bashrc</em>. Za pomocą opcji
+        <em>-qf</em> możemy ustalić z jakiego pakietu pochodzi.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ rpm -qf /etc/bashrc
+setup-2.13.7-6.el9.noarch
+</pre>
+      <p>
+        Pobieramy plik z internetu lub możemy załadować go z płyty. Do 
+        polecenia
+        <strong>rpm2cpio</strong> podajemy ścieżkę do pliku, następnie wyście 
+        polecenia przekierowujemy
+        za pomocą potoku do polecenia <strong>cpio</strong> z następującymi
+        opcjami <em>-i</em> (wypakuj), <em>-m</em> (zachowaj oryginalny
+        czas modyfikacji plików), <em>-d</em> (utwórz katalogi przedzające
+        pliki). Takie wypakowanie nalepiej jest zrobić w odrębnym katalogu
+        na przykład w <em>/tmp</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ mkdir /tmp/setup.rpm
+[user@server1 ~]$ cd /tmp/setup.rpm/
+[user@server1 setup.rpm]$ rpm2cpio /mnt/BaseOS/Packages/setup-2.13.7-6.el9.noarch.rpm | cpio -imd
+1430 blocks
+[user@server1 setup.rpm]$ ls
+etc  run  usr
+[user@server1 setup.rpm]$ ls -l etc/bashrc 
+-rw-r--r--. 1 user user 3019 Jun 23  2020 etc/bashrc
+</pre>
+      <p>
+        Teraz możemy przekopować potrzebny nam pliki.
+      </p>
+      <h3 id="exec9.1">Ćwiczenie 1: Instalacja pakietu zsh</h3>
+      <p>
+        Na maszynie <em>server1</em>, jak użytkownik z mozliwością podniesienia
+        uprawnień zamontuj płytę/obraz płyty w systemie. Za pomocą polecenia
+        <em>rpm</em> wyświetl informacje (podstawowe) o pakiecie <em>zsh</em>,
+        sprawdź jego poprawność oraz wiarygodność, a następnie zainstaluj go
+        w systemie. Na koniec sprawdź czy występują jakieś róznice między 
+        plikami zainstalowanymi, a plikami oryginalnymi występującymi w
+        pakiecie.
+      </p>
+      <h3 id="exec9.2">Ćwiczenie 2: Pobieranie informacji oraz usunięcie pakietu</h3>
+      <p>
+        Na maszynie <em>server1</em>, jak użytkownik z mozliwością podniesienia
+        uprawnień zamontuj płytę/obraz płyty w systemie. Za pomocą polecenia
+        <em>rpm</em> sprawdzić czy zainstalowany jest pakiet <em>setup</em> i
+        wyświetl jego pliki konfiguracyjne. Wyświetl informacje na temat
+        pakietu <em>zlib-devel</em> znajdującego się na obrazie płyty.
+        Zainstaluj ponownie pakiet <em>zsh</em> a następnie go usuń.
+      </p>
+      <h2 id="ch9summary">Podsumowanie</h2>
+      <p>
+        W tym rozdziale zapoznaliśmy się z pojęciem pakietu oprogramowania oraz
+        z podstawowymi metodami na zarządzanie nim w RHEL w praktyce.
+        Dowiedzieliśmy się jak instalować, usuwać oraz wydobywać informacje o
+        i z pakietów. W następnym rodziale zajmiemy się bardziej zaawansowanym
+        zarządzeniem pakietami przy użyciu polecenia <strong>dnf</strong>.
+      </p>

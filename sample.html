@@ -1,0 +1,739 @@
+      <h1 id="8.processandschedule">8. Zarządzanie procesami oraz harmonogram zadań</h1>
+      <p>
+        Zarządzanie procesami oraz obsługa harmonogramu zadań jest kolejnym z
+        zadań, które będziemy wykonywać jako administrator systemu Linuks.
+      </p>
+      <h2 id="8.1.procesmgmt">8.1. Zarządzanie procesami</h2>
+      <p>
+        <strong>Procesy</strong> są to odniesienia w pamięci do uruchomionych 
+        w systemie programów. Procesy są
+        sposobem organizacji przydzielania zasobów komputera. Struktura
+        procesów w systemie ma charakter hierarchiczny, każdy proces może mieć
+        swoje podprocesy, tzw. procesy potomne. Każdy z procesów posiada swój 
+        unikalny identyfikator <strong>PID</strong>, identyfikator służy
+        jądru do komunikacji z procesami. W systemie istnieje masa procesów,
+        wśród nich możemy wyróżnić takie jak <strong>demony</strong>, które 
+        świadczą usługi użytkownikom oraz innym procesom. Zwykle działają one 
+        w tle, oraz pozostają w stanie bezczynności oczekując na żadania od
+        użytkownika lub od innego procesu.
+      </p>
+      <p>
+        Procesy podczas wykonywania swoich czynności mogą znajdować się w 5
+        różnych stanach. Stan procesu zależy od tego co robi w danym
+        momencie. Procesy mogą przyjmować następujące stany: 
+      </p>
+      <ul>
+        <li><strong>Running</strong> - (pol. <em>uruchomiony</em>), proces jest
+          obecnie wykonywany przez CPU.</li>
+        <li><strong>Sleeping</strong> - (pol. <em>spanie</em>), proces oczekuje
+          na dane.</li>
+        <li><strong>Waiting</strong> - (pol. <em>czekanie</em>), proces czeka
+          na swoją kolej do wykonania przez procesor.</li>
+        <li><strong>Stopped</strong> - (pol. <em>zatrzymany</em>), proces
+          otrzymał sygnał zatrzymania wykonania i nie wznowii go do momentu
+          otrzymiania odpowiedniego sygnału.</li>
+        <li><strong>Zombie</strong> - (pol. <em>zombie</em>), proces jest
+          martwy, nie posiada już żadnych zasobów. Widnieje wśród innych
+          procesów gdyż czeka na zakończenie przez inny proces.</li>
+      </ul>
+      <p>
+        Procesy podczas swoje cyklu <em>życia</em> w systemie, zmieniają te
+        stany w zależności od tego jaką czynność wykonują. Najczęściej będzie
+        to lawirowanie między trzema pierwszymi. Teraz kiedy znamy
+        charakterystykę procesów możemy przejść do praktyki, a na początku
+        zajmiemy się wyświetlaniem informacji o procesach.
+      </p>
+      <h3 id="8.1.1.pscommand">8.1.1. Polecenie ps</h3>
+      <p>
+        Polecenie <strong>ps</strong>, służy do wyświetlania procesesów w 
+        tabeli.
+        Domyślnie to polecnie bez żadnych opcji wyświetli procesy uruchomione
+        w tym oknie terminala.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ ps
+    PID TTY          TIME CMD
+   1452 pts/1    00:00:00 bash
+   1891 pts/1    00:00:00 ps
+</pre>
+      <p>
+        Wynik polecenia podzielony jest na 4 kolumny. Kolumna
+        <code class="code-inline">PID</code> zwraca identyfikator procesu,
+        następnie kolumna <code class="code-inline">TTY</code> wyświetla
+        powiązaną z procesem nazwę terminala, na którym został uruchomiony,
+        później w kolumnie <code class="code-inline">TIME</code> znajduje się
+        łączny czas procesora w wyrażony w sekundach poświęcony na wykonanie
+        tego procesu. Na końcu w kolumnie <em>CMD</em>, znajduje się polecenie
+        odpowiedzialne za ten proces. To polecenie nie zwraca zbyt wielu
+        informacji, które mogły by nam pomóc w zarządzaniu procesami. Warto
+        dodać do tego polecenia kilka opcji.
+      </p>
+      <p>
+        Jedną z nich może opcja <em>-e</em>, która zwraca każdy występujący w
+        systemie proces, następną jak warto dodać jest opcja <em>-f</em>,
+        zwracająca wiecej szczegółów nt. procesu, jednak ta opcja nie jest dla
+        nas wystarczająca, ponieważ do zarządzania procesami potrzebujemy
+        jeszcze kilku informacji, które jest w stanie zwrócić nam opcja
+        <em>-l</em>. Te wymienione trzy opcje, tworzą najbardziej powszechne
+        użycie polecenia <em>ps</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ ps -efl 
+F S UID          PID    PPID  C PRI  NI ADDR SZ WCHAN  STIME TTY          TIME CMD
+...
+4 S root        1443     849  0  80   0 -  4884 -      10:34 ?        00:00:00 sshd: user [priv]
+5 S user        1448    1443  0  80   0 -  4884 -      10:34 ?        00:00:00 sshd: user@pts/1
+0 S user        1452    1448  0  80   0 - 56082 do_wai 10:34 pts/1    00:00:00 -bash
+1 I root        1828       2  0  80   0 -     0 -      13:15 ?        00:00:00 [kworker/u2:2-events_unbound]
+1 I root        1838       2  0  80   0 -     0 -      13:58 ?        00:00:00 [kworker/0:1-events]
+1 I root        1851       2  0  80   0 -     0 -      14:02 ?        00:00:00 [kworker/u2:1-events_unbound]
+1 I root        1910       2  0  80   0 -     0 -      15:28 ?        00:00:00 [kworker/0:0-kdmflush/253:0]
+1 I root        1931       2  0  80   0 -     0 -      15:37 ?        00:00:00 [kworker/0:2-kdmflush/253:0]
+0 R user        1932    1452  0  80   0 - 56375 -      15:38 pts/1    00:00:00 ps -efl
+</pre>
+      <p>
+        Polecenie to zwraca bardzo dużo informacji o procesach. Najważniejsze
+        dla nas są kolumny: <code class="code-inline">S</code>,
+        <code class="code-inline">UID</code>, <code class="code-inline">PID</code>,
+        <code class="code-inline">PPID</code>, <code class="code-inline">PRI</code>,
+        <code class="code-inline">NI</code> oraz <code class="code-inline">CMD</code>,
+        w których znajdują się takie informacje jak:
+      </p>
+      <ul>
+        <li><code class="code-inline">S</code> - Stan procesu.</li>
+        <li><code class="code-inline">UID</code> - Identyfikator użytkownika,
+          w tym przypadku jest to nazwa użytkownika.</li>
+        <li><code class="code-inline">PID</code> - Identyfikator procesu.</li>
+        <li><code class="code-inline">PPID</code> - Identyfikator procesu
+          nadrzędnego (procesu, który uruchomiło ten proces).</li>
+        <li><code class="code-inline">PRI</code> - Priorytet procesu.</li>
+        <li><code class="code-inline">NI</code> - Wartość <em>nice</em>.</li>
+        <li><code class="code-inline">CMD</code> - Polecenie, które uruchomiło
+          proces.</li>
+      </ul>
+      <p>
+        Jako ciekawostkę podam, iż procesy, które w kolumnie 
+        <code class="code-block">TTY</code> posiadają znak zapytania
+        (<strong>?</strong>) pochodzą prawdopodbnie od któregoś z demonów.
+      </p>
+      <p>
+        Polecenie <em>ps</em> daje możliwość wyświetlenia
+        tylko tych informacji które potrzebujemy dzięki opcji <em>-o</em>.
+        Możemy użyć polecenia poniżej:
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ ps -eo user,s,pid,command
+USER     S     PID COMMAND
+root     S       1 /usr/lib/systemd/systemd rhgb --switched-root --system --deserialize 31
+root     S       2 [kthreadd]
+root     I       3 [rcu_gp]
+root     I       4 [rcu_par_gp]
+root     I       6 [kworker/0:0H-events_highpri]
+root     I       9 [mm_percpu_wq]
+root     S      10 [rcu_tasks_kthre]
+root     S      11 [rcu_tasks_rude_]
+root     S      12 [rcu_tasks_trace]
+root     S      13 [ksoftirqd/0]
+root     I      14 [rcu_preempt]
+</pre>
+      <p>
+        Za pomocą <em>ps</em>, możemy wyszukać proces na podstawie polecenia.
+        Do tego wykorzystamy opcje <em>-C</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ ps -o user,s,pid,command -C sshd
+USER     S     PID COMMAND
+root     S     849 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+root     S    1974 sshd: user [priv]
+user     S    1979 sshd: user@pts/0
+root     S    2098 sshd: user [priv]
+user     S    2103 sshd: user@pts/1
+</pre>
+      <p>
+        Polecenie <em>ps</em> zawiera ogromną ilość opcji. Ich opisy znajdują
+        się na stronie podręcznika polecenia.
+      </p>
+      <h3 id="8.1.2.polecenietop">8.1.2. Polecenie top</h3>
+      <p>
+        Polecenie z poprzednie podrozdziału służyło do wyświetlania procesów.
+        Za pomocą tego przedstawionego tutaj możemy je monitorować w
+        w czasie rzeczywistym. Polecenie <strong>top</strong>, może posłużyć
+        do sprawdzenia czy system nie jest przeciążony.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ top
+top - 16:31:38 up  6:00,  1 user,  load average: 0.00, 0.00, 0.00
+Tasks: 174 total,   1 running, 173 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.0 us,  0.3 sy,  0.0 ni, 99.7 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+MiB Mem :    960.5 total,    123.2 free,    464.1 used,    373.2 buff/cache
+MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.    335.9 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND 
+      1 root      20   0  106212  15976  10328 S   0.0   1.6   0:01.96 systemd  
+      2 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kthreadd 
+      3 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_gp 
+      4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_par_gp 
+      6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/0:0H-events_highpri 
+      9 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 mm_percpu_wq 
+     10 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_kthre 
+     11 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_rude_ 
+     12 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_trace 
+     13 root      20   0       0      0      0 S   0.0   0.0   0:00.36 ksoftirqd/0 
+     14 root      20   0       0      0      0 I   0.0   0.0   0:00.26 rcu_preempt 
+     15 root      rt   0       0      0      0 S   0.0   0.0   0:00.05 migration/0
+     16 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/0 
+     18 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kdevtmpfs
+     19 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 netns 
+     20 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 inet_frag_wq 
+</pre>
+      <p>
+        Informacje zwracane przez to polecenie możemy podzielić na dwie części
+        jedną z nich jest część, w której znajduje się podsumowanie. W pierszej
+        linii znajduje się linia identyczna z informacją zwracaną przez
+        polecenie <em>uptime</em>, następne linie to: ilość liczbowa procesów w
+        systemie, informacje o zużyciu procentowym procesora, zużyciu
+        pamięci operacyjnej oraz przestrzeni wymiany. Ostatnia kolumna z
+        ostatniego rzędu zwraca rzeczywistą ilość dostępnej pamięci operacyjnej
+        bez wliczania przestrzeni wymiany.  
+      </p>
+      <p>
+        Drugą częścią jest tabelaryczne przedstawienie listy procesów 
+        dostępnych
+        w systemie. W tym przypadku procesy, które zużywają najwięcej zasobów
+        komputera wyświetlane są w pierwszych wierszach tabeli. Przez co można
+        stwierdzić, że tabela jest posortowana względem wartości procentowej
+        zużycia procesora. Polecenie <em>top</em> jest bardzo elastyczne,
+        posiadamy możliwość dostosowania kolumn wyświetlanych w tabeli oraz
+        części z podsumowaniem, informacje na ten temat znajdują się na stronie
+        podręcznika.
+      </p>
+      <h3 id="8.1.3.niceandrenice">8.1.3. Priorytet procesu</h3>
+      <p>
+        Podczas wykonywania procesów, każdy z procesów dostaje dostęp do
+        procesora na ułamek sekundy, wówczas proces zmienia swój stan na
+        <em>Running</em>, po upływie tego czasu proces w zależności od czynności
+        przechodzi albo w <em>Waiting</em> albo w <em>Sleeping</em>. Kiedy
+        proces przebywa w tych stanach wykonywane są inne procesy, później
+        proces znów zostaje wznowiony i tak w kółko. Tego typu działanie
+        nazywane jest wielozadaniowością (a przynajmniej się takie wydaje).
+        Każdy z procesów otrzymuje określoną ilość czasu, jednak są procesy,
+        które mogą otrzymać go więcej lub mniej. Czasami zmiana tych wartość
+        jest to niezbędna do funkcjonowania
+        systemu. Czynnikiem który wpływa na tę decyzje jest 
+        <strong>priorytet</strong> - kolumna <em>PRI</em> przy poleceniu
+        <em>ps</em>. Priorytety są już z góry określone podczas uruchamiania
+        procesu. Najwyszym priorytetem (proces otrzyma najwięcej czasu
+        procesora) jest 0, a najniższym (proces otrzyma najmniej czasu
+        procesora) jest 39. Administratorzy mają wpływ na priorytet procesu
+        za pomocą wartości <strong>nice</strong>. Kiedy administrator chce
+        zmienić wartość priorytetu, ustala wartość <em>nice</em> dla procesu
+        a ona jest do niego dodawana. Wartość <em>nice</em>, może być w zakresie
+        od -20 do 19. Jeśli chcemy aby proces posiadał w momencie uruchomienia
+        inny priorytet zmieniamy go za pomocą polecenia <strong>nice</strong>. 
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ ps -efl | grep $(pidof top)
+0 S user        2152    1980  0  80   0 - 56480 do_sel 17:24 pts/0    00:00:00 top
+[user@server1 ~]$ nice -n 19 top
+[user@server1 ~]$ ps -efl | grep $(pidof top)
+0 S user        2137    1980  0  99  19 - 56480 do_sel 17:20 pts/0    00:00:00 top
+</pre>
+      <p>
+        Kolumna numer 7 zawiera wartość priorytetu, a 8 kolumna zawiera wartość
+        <em>nice</em>. Zwróćmy uwagę na rozbierzności w wyświetlaniu 
+        priorytetów procesów między poleceniami <em>top</em> oraz <em>ps</em>.
+        Nie mniej jednak wartość <em>nice</em> sprawiła zmianę priorytetu
+        procesu <em>top</em>. 
+      </p>
+      <p>
+        Jeśli proces jest już uruchomiony to również możemy zmienić jego
+        priorytet, za pomocą polecenie <strong>renice</strong>, jednak
+        najpierw poznamy dwa polecenia, które ułatwią nam pracę z poleceniem
+        <em>renice</em> oraz każdym innym, które potrzebuje identyfikatora
+        procesu. Tymi polecaniami są polecenia <strong>pidof</strong> oraz
+        <strong>pgrep</strong>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ pidof top
+2170
+[user@server1 ~]$ pgrep top
+2170
+</pre>
+      <p>
+        Polecenia bez żadnych opcji zwracają to samo - identyfikator
+        procesu i tymi poleceniami będziemy się wspomagać. Oczywiście więcej
+        informacji na ich temat znajduje się na stronach podręcznika. Wracajac
+        do wartości <em>nice</em>, zmienie teraz priorytet działającego
+        procesu za pomocą polecenia <em>renice</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo renice -n -10 $(pidof top)
+[sudo] password for user: 
+2170 (process ID) old priority 0, new priority -10
+[user@server1 ~]$ ps -efl | grep $(pidof top)
+0 S user        2170    1980  0  70 -10 - 56480 do_sel 17:43 pts/0    00:00:00 top
+</pre>
+      <p>
+        Priorytet procesu zmienił się. Zwróćmy uwagę na to, iż polecenie
+        <em>renice</em> wymaga uprawnień superużytkownika do działania.
+      </p>
+      <h3 id="8.1.4.signals">8.1.4. Zarządzanie procesami za pomocą syganałów</h3>
+      <p>
+        Działanie procesów, może być kontrolowane za pomocą sygnałów, które
+        są do nich wysyłane przez jądro systemu. Te sygnały mogą zatrzymać
+        wykonanie procesu, przenieść proces na do tła, poprosić go o zakończenie
+        działania lub gdy jest dość oporny na poprzedni sygnał poprostu
+        unicestwić. Każdy z sygnałów posiada swoją nazwę oraz numer. My możemy
+        używać dowolnej formy. Poniżej znajduje się lista najczęściej
+        wykorzystywanych sygnałów wraz z numerami.
+      </p>
+      <ul>
+        <li><strong>SIGHUP - 1</strong> - sygnał zawieszenia, powoduje
+          odłącznieni się od terminala, którym proces wystartował. W przypadku
+          demonów, ten sygnał spowoduje ponowne odczytanie konfiguracji bez
+          restartu demona.</li>
+        <li><strong>SIGINT - 2</strong> - sygnał przerwania, wysyłany jest do
+          procesu w momencie naciśnięcia klawiszy <em>Ctrl+c</em>.</li>
+        <li><strong>SIGKILL - 9</strong> - sygnał zabicia, powoduje
+          unicestwienie procesu, a sprzątaniem po nim zajmuj się jądro.</li>
+        <li><strong>SIGTERM - 15</strong> - sygnał zakończnia, prośba o
+          zakończenie swojego działania. W przypadku tego sygnału proces ma
+          możliwość posprzątania po sobie oraz polubownego zakończenia
+          wszystkich czynności. Ten sygnał jest domyślnym sygnałem wysyłanym
+          do procesów.</li>
+        <li><strong>SIGCONT - 18</strong> - sygnał kontynuacji pracy w tle,
+          równoznaczny z poleceniem <em>bg</em>.</li>
+        <li><strong>SIGSTOP - 19</strong> - sygnał zatrzymania, równoznaczny
+          z naciśnięciem kombinacji klawiszy <em>Ctrl+z</em>.</li>
+        <li><strong>SIGTSTP - 20</strong> - sygnał kontynuacji pracy na
+          pierwszym planie, równoznaczny z poleceniem <em>fg</em>.</li>
+      </ul>
+      <p>
+        Do wysyłania sygnałów do procesów służy polecenie <strong>kill</strong>
+        lub <strong>pkill</strong>. Różnią się one tym, iż poleceniu 
+        <em>kill</em> podaje się <em>PID</em>, natomiast <em>pkill</em> nazwę
+        procesu lub polecenie. Numery sygnałów podjemy po myślniku przed
+        <em>PID</em>-em lub nazwą. Jeśli chcemy użyć nazw sygnałów należy
+        podać je po opcji <em>-s</em> (w przypadku polecenia <em>kill</em>) lub
+        <em>--signal</em> (w przypadku polecenia <em>pkill</em>). Listę
+        dostępnych sygnałów możemy wyświetlić za pomocą poniższego polecenia:
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ kill -l
+ 1) SIGHUP	 2) SIGINT	 3) SIGQUIT	 4) SIGILL	 5) SIGTRAP
+ 6) SIGABRT	 7) SIGBUS	 8) SIGFPE	 9) SIGKILL	10) SIGUSR1
+11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO	30) SIGPWR
+31) SIGSYS	34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+63) SIGRTMAX-1	64) SIGRTMAX	
+</pre>
+      <p>
+        W ramach przykładu zakończymy działania procesu <em>top</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ pkill top
+[user@server1 ~]$ kill $(pidof top)
+</pre>
+      <p>
+        Do kończenia pracy procesów możemy użyć również polecenia
+        <strong>killall</strong>, które kończy pracę wszystkich procesów,
+        które pasują do określonych kryteriów.
+      </p>
+      <h2 id="8.2.taskschedule">8.2. Harmonogram zadań</h2>
+      <p>
+        Harmonogram zadań służy do planowania wykonania poleceń czy
+        uruchomienia programów w przyszłości. Na Linuksie możemy to zrobić na
+        dwa sposóby, w zależności od potrzeby powtórzenia danego zadania. Na
+        Linuksie zadania z harmonogramu moga być uruchomione raz w określonym
+        czasie lub wykonywane cyklicznie co jakiś okres czasu. Narzędziami
+        odpowiedzialnymi za obsługę funkcji harmonogramu zadań na Linuksie 
+        są <strong>at</strong> oraz <strong>cron</strong>. W RHEL możemy
+        również spotkać się z mechanizmem kontroli dostępu do tych programów.
+      </p>
+      <h3 id="8.2.1.scheduleaccesscontrol">8.2.1. Kontrola dostępu do harmongramu</h3>
+      <p>
+        W RHEL stosowany jest mechanizm kontroli dostępu do haromonogramu
+        zdań zarówno dla obu narzędzi. Ten mechanizm składa się z dwóch
+        plików, jeden z rozszerzeniem <em>*.allow</em> oraz jeden z
+        rozszerzeniem <em>*.deny</em>. W tych plikach umieszczamy
+        wpis z nazwą użytkownika w zależności od tego czy użytkownik ma mieć
+        lub nie mieć dostępu do tych narzędzi. Sama obecność tych plików w
+        systemie ma wpływ na to czy użytkownicy będą mogli korzystać z
+        harmonogramu zadań. Każdy program posiada swoją parę plików. W 
+        poniższej tabeli znajdują się rozpisane zależności, które obrazują
+        w jaki sposób obecność tych plików wpływa na dostęp do narzędzi
+        harmonogramu zadań.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Obecność pliku <em>*.allow</em></th>
+            <th>Obecność pliku <em>*.deny</em></th>
+            <th>Wpływ na dostęp do <em>at</em> oraz <em>cron</em></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Istnieje, posiada wpisy użytkowników.</td>
+            <td>Nie musi istnieć.</td>
+            <td><strong>Wszyscy użytkownicy w pliku posiadają dostęp.</strong></td>
+          </tr>
+          <tr>
+            <td>Istnieje, ale jest pusty.</td>
+            <td>Nie musi istnieć.</td>
+            <td><strong>Nikt nie ma dostępu.</strong></td>
+          </tr>
+          <tr>
+            <td>Nie istnieje.</td>
+            <td>Istnieje, posiada wpisy użytkowników.</td>
+            <td><strong>Wszyscy użytkownicy, poza tymi zapisanym w pliku
+              <em>*.deny</em> mają dostęp.</strong></td>
+          </tr>
+          <tr>
+            <td>Nie istnieje.</td>
+            <td>Istnieje, ale jest pusty.</td>
+            <td><strong>Wszyscy użytkownicy posiadają dostęp.</strong></td>
+          </tr>
+          <tr>
+            <td>Nie istnieje.</td>
+            <td>Nie istnieje.</td>
+            <td><strong>Nikt nie ma dostępu.</strong></td>
+          </tr>
+        </tbody> 
+      </table>
+      <p>
+        Powyższe zasady nie obowiązują oczywiście superużytkownika, nawet mimo
+        umieszczenia jego nazwy w plik <em>*.deny</em>. Domyślnie w RHEL
+        plik <em>*.allow</em> nie istnieje, natomiast plik <em>*.deny</em>
+        istnieje, ale jest pusty.
+      </p>
+      <p class="exam_tip">
+        Definiując wpisy w tych plikach, należy pamiętać o tym aby jedna linia
+        zwierała jednego użytkownika. To jedyna poprawna metoda.
+      </p>
+      <p>
+        Po wpisaniu nazwy użytkownika do pliku, jeśli będzie on chciał
+        skorzystać z <em>at</em> lub <em>cron</em> zobaczy poniższe komunikaty.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ at
+You do not have permission to use at. 
+[user@server1 ~]$ crontab -e
+You (user) are not allowed to use this program (crontab)
+See crontab(1) for more information
+</pre>
+      <p>
+        Oczywiście dla przykładu zablokowałem dostęp do obu narzędzi.
+      </p>
+      <h3 id="8.2.2.at">8.2.2. Wykonanie zadań w przyszłości - polecenie at</h3>
+      <p>
+        Polecenie <strong>at</strong> służy do planowania pojedyńczego 
+        wykonania
+        zadania w przyszłości. Podczas wydawania polecenia podajemy czas oraz
+        ewentualnie datę kiedy zadanie ma zostać wykonane. Czas możemy podać
+        na kilka różnych sposobów:
+      </p>
+      <ul>
+        <li><strong>at 1:15am</strong> - polecenie zostanie uruchomione o 01:15
+          następnego dnia,</li>
+        <li><strong>at noon</strong> - polecenie zostanie uruchomione w
+          południe tego lub nastęnego dnia,</li>
+        <li><strong>at 23:45</strong> - polecenie zostanie uruchomione o 23:45,</li>
+        <li><strong>at midnight</strong> - polecenie zostanie uruchomione o
+          północy,</li>
+        <li><strong>at 17:05 tommorow</strong> - polecenie zostanie uruchomione
+          w dniu jutrzejszym o 17:05,</li>
+        <li><strong>at now + 5 hours</strong> - polecenie zostanie uruchonione
+          za 5 godzin,</li>
+        <li><strong>at 3:00 10/12/2022</strong> - polecenie zostanie
+          uruchomione o 3 w nocy 12 października 2022 roku (w anglosaskim
+          zapisie daty na początku podaje się miesiąc następnie dzień
+          miesiąca).</li>
+      </ul>
+      <p>
+        Po wydaniu polecenia z datą, polecenie uruchomi tryb interaktywyny,
+        gdzie w każdej linii będziemy mogli zapisać polecenie, które wykona
+        się o podanym czasie. Po zakończeniu zapisywania poleceń naciskamy
+        kombinację <em>Ctrl+d</em>, aby zakończyć działanie programu i zapisać
+        polecenia, wówczas po znaku zachęty pojawi się znak <em>&lt;EOT&gt;</em>
+        oznaczający zakończenie wprowadzania poleceń.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ at midnight
+warning: commands will be executed using /bin/sh
+at&gt; date 
+at&gt; pwd
+at&gt; whoami
+at&gt; who
+at&gt; w
+at&gt; &lt;EOT&gt;
+job 2 at Wed Jul  6 00:00:00 2022
+</pre>
+      <p>
+        Polecenia zapisywane są w odpowiednich pliku w katalogu
+        <em>/var/spool/at</em>. Dostęp do katalogu wymaga uprawnień 
+        administratora.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo ls -l /var/spool/at
+[sudo] password for user: 
+total 4
+-rwx------. 1 user user 3365 Jul  5 09:28 a0000201a56968
+</pre>
+      <p>
+        Programem odpowiedzialnym za wykonanie poleceń jest demon <em>atd</em>.
+        Za pomocą opcji polecenia <em>at</em> możemy na przykład wyświetlić
+        listę zdefiniowanych zadań (<em>-l</em>):
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ at -l 
+2	Wed Jul  6 00:00:00 2022 a user
+</pre>
+      <p>
+        W pierwszej kolumnie znajduje się numer zadania. Jest on istotny jeśli
+        chcemy na przykład wyświetlić jego plik za pomocą opcji <em>-c</em>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ at -c 2
+#!/bin/sh
+# atrun uid=1000 gid=1000
+# mail user 0
+umask 22
+SHELL=/bin/bash; export SHELL
+HISTCONTROL=ignoredups; export HISTCONTROL
+HISTSIZE=1000; export HISTSIZE
+HOSTNAME=server1.example.com; export HOSTNAME
+PWD=/home/user; export PWD
+LOGNAME=user; export LOGNAME
+XDG_SESSION_TYPE=tty; export XDG_SESSION_TYPE
+MOTD_SHOWN=pam; export MOTD_SHOWN
+HOME=/home/user; export HOME
+LANG=en_US.UTF-8; export LANG
+...
+${SHELL:-/bin/sh} &lt;&lt; 'marcinDELIMITER29478f5e'
+date
+pwd
+whoami
+who
+w
+marcinDELIMITER29478f5e
+</pre>
+      <p>
+        Zadanie możemy też usunąć za pomocą opcji <em>-r</em> lub <em>-d</em>,
+        plik z katalogu <em>/var/spool/at</em> również zostanie usunięty.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ at -d 2
+[user@server1 ~]$ at -l
+</pre>
+      <p>
+        Do usunięcia potrzebny jest numer zadania, który znajduje się
+        pierwszej kolunie listy zadań wyświetlonej za pomocą polecenia
+        <code class="code-inline">at -l</code>. Obie przestawione powyżej
+        opcje są aliasami do poleceń <em>atq</em> oraz <em>atrm</em>.
+      </p>
+      <p>
+        Działanie narzędzi harmonogramu zadań jest rejestrowane, a ich
+        komunikaty diagnostyczne są zapisywane w <em>/var/log/cron</em>. Mimo
+        iż nazwa pliku wskazuje iż dotyczy on głównie <em>crond</em> to
+        komunikaty <em>atd</em> również są tam zapisywane. Aby
+        wyświetlić jego zawartość potrzebne są uprawnienia administratora:
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo tail /var/log/cron
+[sudo] password for user: 
+Jul  5 09:01:01 server1 anacron[1651]: Jobs will be executed sequentially
+Jul  5 09:01:01 server1 run-parts[1640]: (/etc/cron.hourly) finished 0anacron
+Jul  5 09:01:01 server1 CROND[1639]: (root) CMDEND (run-parts /etc/cron.hourly)
+Jul  5 09:21:01 server1 anacron[1651]: Job `cron.daily' started
+Jul  5 09:21:01 server1 anacron[1651]: Job `cron.daily' terminated
+Jul  5 09:21:01 server1 anacron[1651]: Normal exit (1 job run)
+Jul  5 10:01:01 server1 CROND[1941]: (root) CMD (run-parts /etc/cron.hourly)
+Jul  5 10:01:01 server1 run-parts[1941]: (/etc/cron.hourly) starting 0anacron
+Jul  5 10:01:01 server1 run-parts[1941]: (/etc/cron.hourly) finished 0anacron
+Jul  5 10:01:01 server1 CROND[1940]: (root) CMDEND (run-parts /etc/cron.hourly)
+</pre>
+      <h3 id="8.2.3.cron">8.2.3. Definiowanie powtarzalnych zadań - program cron</h3>
+      <p>
+        Na Uniksach, bo nie tylko na Linuksie, istnieje program służący do
+        definiowania powtarzalnych zadań uruchamianych co jakiś czas. Takim
+        programem, a raczej demonem jest <strong>cron</strong>. Działanie
+        tego programu opiera się o pliki zwane <em>tablicami cron</em> lub
+        <em>crontabami</em>. Każdy użytkownik może korzystać z tego narzędzia,
+        chyba, że występuje on w pliku <em>/etc/cron.deny</em>.
+        Użytkownicy do kontroli harmonogramu zadań, używają polecenia
+        <strong>crontab</strong>. Każdy z nich zapisuje zadania w swojej
+        tablicy znajdującej się w katalogu <em>/var/spool/cron</em>. Zapis
+        zadań w tablicy wymaga ściśle określonej składni. Wpis składa się z
+        5 pól czasu, ewentualnego pola zawierającego nazwę użytkownika
+        (pole to występuje tylko w systemowej tablicy cron 
+        <em>/etc/crontab</em>), z którego uprawnieniami ma zostać wykonane to
+        zadanie, oraz reszty linii zawierającej polecenie do wykonania.
+        Poniżej znajduje się przykład wpis, który sobie przeanalizujemy.
+      </p>
+<pre class="code-block">
+15 13 4 7 * echo "Hello World" &gt; /dev/pts/1
+</pre>
+      <p>
+        Każdy wpis zadania w tablicy <em>cron</em> rozpoczyna się od 5 pól
+        określających kiedy owe zadanie ma zostać wykonane. Pola od lewej
+        definiują kolejno:
+      </p>
+      <ul>
+        <li><code class="code-inline">15</code> - pole 1, minuta w godzinie.
+          W tym polu określamy konkretną minutę godziny w której zadanie
+          ma zostać uruchomione, jeśli jest to jedyne skonfigurowane pole
+          wówczas zadanie bedzie uruchamiać się co godzinę. To 
+          pole przyjmuje wartości od 0 do 59.</li>
+        <li><code class="code-inline">13</code> - pole 2, godzina w dniu. To
+          pole wskazuje na godzinę, w której zadanie ma zostać uruchomione.
+          Jeśli to jedyne skonfigurowane pole, wówczas zadanie będzie
+          uruchamiać się o pełnej godzinie kazdego dnia. To pole może
+          przyjmować wartości od 0 do 23.</li>
+        <li><code class="code-inline">4</code> - pole 3, dzień miesiąca. Pole
+          wskazuje dzień miesiąca w którym ma zostać uruchomione zadanie. Jeśli
+          jest to jedyne zdefiniowane pole, to zadanie będzie się uruchamiać
+          tego dnia każdego miesiąca. Pole to może przyjmować wartości od
+          1 do 31.</li>
+        <li><code class="code-inline">7</code> - pole 4, miesiąc, pole wskazuje
+          na miesiąc w roku. Pole może przyjmować zarówno wartości liczbowe
+          jak alfabetyczne, nazwy miesięcy składają się trzech pierwszych
+          małych liter angielskiej nazwy miesiąca.</li>
+        <li><code class="code-inline">*</code> - pole 5, dzień tygodnia, pole
+          wskazuje na dzień tygodnia podobnie jak miesiąc może zawierać
+          wartości liczbowe oraz alfabetyczne zawierające trzy pierwsze 
+          małe litery angielskiej nazwy dnia. Wartość 0 oraz 7 oznaczają 
+          niedzielę.</li> 
+      </ul>
+      <p>
+        Pola czasu przyjmują takie wartości jak listy (określajace konkretne
+        godziny, dni itd. Na przykład <em>15,16</em>), zakresy (określające,
+        którego do którego polecenia ma zostać wykonane np. <em>10-20</em>) 
+        oraz wartości skokowe, które definiują co ile minut, godzin lub dni
+        wykonać to zadanie. Listy oraz zakresy można łączyć ze sobą zazwyczaj
+        <em>10-15,21</em> może to oznacząć uruchomienie zadania od 10-15 oraz
+        21 dnia miesiąca. Więcej informacji na temat można znaleźć na stronie
+        podręcznika pliku <em>/etc/crontab</em>. 
+      </p>
+      <p>
+        Ostatnie pole, jest miejscem do umieszaczania poleceń. Jeśli polecenie
+        zwraca istotne dane wyjściowe to najlepiej jest je przekierować.
+      </p>
+      <p class="exam_tip">
+        Wykonując zadania administracyjne, powinniśmy mieć opanowaną składnie
+        wpisów zadań oraz rozumienie jej poszczególnych części.
+      </p>
+      <p>
+        Do edycji tablicy <em>cron</em> służy polecenie <strong>crontab</strong>
+        z opcją <em>-e</em>. Polecenie to uruchomi edytor, w którym to
+        zapiszemy wpisy harmonogramu, po zakończeniu edycji i zapisaniu zmian
+        polecenie utworzy plik w <em>/var/spool/cron</em> o nazwie użytkownika.
+        Ten plik staje się teraz jego tablicą <em>cron</em>. Po zapisaniu pliku
+        tablica zostaje <em>zainstalowana</em> w pamięci demona. W ten sposób
+        definiuje się wpisy harmonogramu zadań <em>cron</em>.
+      </p>
+      <p>
+        Za pomocą opcji <em>-l</em> możemy wyświetlić obecną tablicę 
+        <em>cron</em>.
+      </p>
+<pre class="code-block">
+[user@server1 log]$ crontab -l
+15 13 4 7 * echo "Hello World" &gt; /dev/pts/1
+</pre>
+      <p>
+        Za pomocą opcji <em>-r</em> możemy usunąć obecną tablicę <em>cron</em>:
+      </p>
+<pre class="code-block">
+[user@server1 log]$ crontab -r
+[user@server1 log]$ crontab -l
+no crontab for user
+</pre>
+      <h3 id="8.2.4.anacron">8.2.4. Wykonanie pominiętych zadań - program Anacron</h3>
+      <p>
+        Nie które komputery z zainstalownym Linuksem, nie są właczone 24/7.
+        Za tem cześć zadań zdefiniowana w systemowym harmonogramie w plikach
+        <em>/etc/cron.*</em> nie jest wykonywana. Pliki te dotyczą czynność 
+        systemowych zdefiniowanych co godzinę, dzień, tydzień czy miesiąc.
+        Ta przypadłość najczęściej dotyczy komputery osobiste.
+        Dlatego też, aby uruchomić te zdania używa się demona
+        <strong>anacron</strong>. Aby demon rozpoczął uruchmianie niewykonanych
+        zadań muszą zostać w systemie spełnione trzy czynniki. Pliki tablicy
+        <em>anacron</em> muszą istnieć w katalogu <em>/var/spool/anacron</em>,
+        musi upłynąć odpowiednia ilość czasu (zdefiowana w pliku
+        systemowej tablicy <em>/etc/anacrontab</em>) oraz komputer musi być
+        podłączony do stałego źródła zasilania. Poniżej znajduje sie plik
+        konfiguracyjny <em>anacron</em>.
+      </p>
+<pre class="code-block">
+SHELL=/bin/sh
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+RANDOM_DELAY=45
+START_HOURS_RANGE=3-22
+1	        5	cron.daily		  nice run-parts /etc/cron.daily
+7	       25	cron.weekly		  nice run-parts /etc/cron.weekly
+@monthly 45	cron.monthly		nice run-parts /etc/cron.monthly
+</pre>
+      <p>
+        W pierwszej kolumnie znajduje się okres (w dniach) jaki musi upłynąć 
+        od ostatniego uruchomienia tych zdań. W drugiej znajduje się opóźnienie
+        które musi minąć od uruchomienia systemu, to opóźnienie jest zazwyczaj
+        powiększone o wartość zdefiniowaną w zmiennej 
+        <code class="code-inline">RANDOM_DELAY</code>.
+        W następnej kolumnie znajduje się identyfikator zdania, a ostatnia
+        kolumna to już pole polecenia. Dość istotną rolę gra tutaj wartość
+        zmiennej <code class="code-inline">START_HOURS_RANGE</code>. Określa
+        ona w jakich godzinach <em>anacron</em> może działać. 
+      </p>
+      <p>
+        Działanie demona możemy wymusić poprzez wydanie polecenia
+        <strong>anacron</strong>.
+      </p>
+<pre class="code-block">
+[user@server1 ~]$ sudo anacron
+[sudo] password for user: 
+[user@server1 ~]$ 
+</pre>
+      <h3 id="exec8.1">Ćwiczenie 1: Wartość nice procesu</h3>
+      <p>
+        Na maszynie <em>server1</em>, uruchomy dwa termiale (mogą być to dwa
+        połączenia SSH z tą maszyną) następnie w jednym z terminali uruchom
+        program <em>top</em>, na drugim terminalu za pomocą polecenia <em>ps</em>
+        lub <em>pgrep</em> ustal <em>PID</em> oraz wartość <em>nice</em> dla
+        wcześniej uruchomionego polecenia <em>top</em>. Zakończ działanie
+        programu <em>top</em>, następnie uruchom je ponownie z priorytetem
+        zmniejszonym o 8 (+8). Potwierdź zmianę priorytet na drugim terminalu.
+        Następnie zwiększ priorytet o 10 (-10) nie zamykając programu <em>top</em>
+        i potwierdź to w drugim terminalu.
+      </p>
+      <h3 id="exec8.2">Ćwiczenie 2: Konfiguracja tablicy cron użytkownika</h3>
+      <p>
+        Na maszynie <em>server1</em> jako superużytkownik zapewnij dostęp
+        do <em>cron</em> dla zwykłego użytkownika, na którego się logujesz.
+        Jako zwykły użytkownik sprawdź nazwę aktualnego terminala
+        (polecenie <em>tty</em>) oraz obecną datę i godzinę (polecenie 
+        <em>date</em>). Za pomocą harmonogramu zadań <em>cron</em> ustaw
+        wykonanie polecenia 
+        <code class="code-inline">echo "Hello World" &gt; nazwa_terminala</code>
+        (za <em>nazwa_terminala</em> podstawiamy nazwę uzyskaną z polecenia
+        <em>tty</em>) za 3 minuty od bierzącego czasu. Zaczekaj na wykonanie
+        zadania.
+      </p>
+      <h2 id="ch8summary">Podsumowanie</h2>
+      <p>
+        W tym rodziale zapoznaliśmy się z procesami, wyświetaliśmy ich listę
+        korzystaliśmy z polecenia <em>top</em>, zmienialiśmy ich priorytet
+        oraz zarządzaliśmy nimi za pomocą sygnałów. W drugiej części zajeliśmy
+        się narzędziami harmonogramu zadań. Nauczyliśmy się korzystać z takich
+        programów jak <em>at</em> czy <em>cron</em>. Na koniec poznaliśmy
+        specyficzny dla rodziny RHEL demon <em>Anacron</em>. W następnym
+        rozdziale zapoznamy się podstawami zarządzania pakietami oprogramowania
+        na RHEL.
+      </p>

@@ -1,0 +1,50 @@
+#!/bin/bash
+
+file=$1;
+
+chapterNumber=$(grep "<h1" $file | sed -nr 's/.+\ id="([0-9]*).+/\1/p');
+#echo $chapterNumber;
+
+amountOfFirstSubchapters=$(grep 'h2' $file | grep "${chapterNumber}\." | wc -l);
+if [ $amountOfFirstSubchapters -gt 0 ]; then
+  echo "<li>$(grep -o "<h1.*" $file | sed -e 's/h1/a/g' -e 's/id="/href="#/')";
+  echo "  <ul class=\"toc\">";
+  
+  i=1;
+  while [ $i -le $amountOfFirstSubchapters ]; do
+    subchapterNumber=${chapterNumber}.$i;
+    amountOfSecSubchapters=$(grep 'h3' $file | grep "${subchapterNumber}\." | wc -l);
+    line=$(grep "${subchapterNumber}\.[a-z]" $file);
+
+    if [ $amountOfSecSubchapters -gt 0 ]; then
+      echo "    <li>$(echo $line | sed -e 's/h2/a/g' -e 's/id="/href=#/')";
+      echo "      <ul class=\"toc\">";
+      j=1;
+      while [ $j -le $amountOfSecSubchapters ]; do
+        secSubchapterNumber=${subchapterNumber}.${j};
+        #echo "SSN: $secSubchapterNumber";
+        line=$(grep "${secSubchapterNumber}\.[a-z]" $file);
+        #echo "Line: $line"; 
+        echo "        <li>$(echo $line | sed -e 's/h3/a/g' -e 's/id="/href="#/')</li>";
+        j=$((j + 1));
+      done
+      echo "      </ul>";
+      echo "    </li>"; 
+    else
+      echo "    <li>$(echo $line | sed -e 's/h2/a/g' -e 's/id="/href="#/')</li>";
+    fi
+    #echo "f h2 ${chapterNumber}.$i";
+    i=$((i + 1));
+  done
+  amountOfOtherSubchapters=$(grep "exec$chapterNumber" $file | wc -l);
+  i=1;
+  while [ $i -le $amountOfOtherSubchapters ]; do
+    line=$(grep "exec${chapterNumber}\.$i" $file);
+    echo "    <li>$(echo $line | sed -e 's/h3/a/g' -e 's/id="/href="#/')</li>";
+    i=$((i + 1));
+  done
+  line=$(grep "ch${chapterNumber}summary" $file);
+  echo "    <li>$(echo $line | sed -e 's/h2/a/g' -e 's/id="/href="#/')</li>";
+  echo "  </ul>";
+  echo "</li>";
+fi 
