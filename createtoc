@@ -17,7 +17,7 @@ if [ $amountOfFirstSubchapters -gt 0 ]; then
     line=$(grep "${subchapterNumber}\.[a-z]" $file);
 
     if [ $amountOfSecSubchapters -gt 0 ]; then
-      echo "    <li>$(echo $line | sed -e 's/h2/a/g' -e 's/id="/href=#/')";
+      echo "    <li>$(echo $line | sed -e 's/h2/a/g' -e 's/id="/href="#/')";
       echo "      <ul class=\"toc\">";
       j=1;
       while [ $j -le $amountOfSecSubchapters ]; do
