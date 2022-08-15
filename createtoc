@@ -12,7 +12,7 @@ if [ $amountOfFirstSubchapters -gt 0 ]; then
   
   i=1;
   while [ $i -le $amountOfFirstSubchapters ]; do
-    subchapterNumber=${chapterNumber}.$i;
+    subchapterNumber="${chapterNumber}\.$i";
     amountOfSecSubchapters=$(grep 'h3' $file | grep "${subchapterNumber}\." | wc -l);
     line=$(grep "${subchapterNumber}\.[a-z]" $file);
 
@@ -21,7 +21,7 @@ if [ $amountOfFirstSubchapters -gt 0 ]; then
       echo "      <ul class=\"toc\">";
       j=1;
       while [ $j -le $amountOfSecSubchapters ]; do
-        secSubchapterNumber=${subchapterNumber}.${j};
+        secSubchapterNumber="${subchapterNumber}\.${j}";
         #echo "SSN: $secSubchapterNumber";
         line=$(grep "${secSubchapterNumber}\.[a-z]" $file);
         #echo "Line: $line"; 
