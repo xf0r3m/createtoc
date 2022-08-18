@@ -14,7 +14,7 @@ if [ $amountOfFirstSubchapters -gt 0 ]; then
   while [ $i -le $amountOfFirstSubchapters ]; do
     subchapterNumber="${chapterNumber}\.$i";
     amountOfSecSubchapters=$(grep 'h3' $file | grep "${subchapterNumber}\." | wc -l);
-    line=$(grep "${subchapterNumber}\.[a-z]" $file);
+    line=$(grep "id=\"${subchapterNumber}\.[a-z]" $file);
 
     if [ $amountOfSecSubchapters -gt 0 ]; then
       echo "    <li>$(echo $line | sed -e 's/<h2/<a/g' -e 's/id="/href="#/' -e 's@/h2@/a@g')";
@@ -23,7 +23,7 @@ if [ $amountOfFirstSubchapters -gt 0 ]; then
       while [ $j -le $amountOfSecSubchapters ]; do
         secSubchapterNumber="${subchapterNumber}\.${j}";
         #echo "SSN: $secSubchapterNumber";
-        line=$(grep "${secSubchapterNumber}\.[a-z]" $file);
+        line=$(grep "id=\"${secSubchapterNumber}\.[a-z]" $file);
         #echo "Line: $line"; 
         echo "        <li>$(echo $line | sed -e 's/<h3/<a/g' -e 's/id="/href="#/' -e 's@/h3@/a@g')</li>";
         j=$((j + 1));
