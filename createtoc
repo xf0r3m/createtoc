@@ -5,7 +5,7 @@ file=$1;
 chapterNumber=$(grep "<h1" $file | sed -nr 's/.+\ id="([0-9]*).+/\1/p');
 #echo $chapterNumber;
 
-amountOfFirstSubchapters=$(grep 'h2' $file | grep "${chapterNumber}\." | wc -l);
+amountOfFirstSubchapters=$(grep 'h2' $file | grep "id=\"${chapterNumber}\." | wc -l);
 if [ $amountOfFirstSubchapters -gt 0 ]; then
   echo "<li>$(grep -o "<h1.*" $file | sed -e 's/<h1/<a/g' -e 's/id="/href="#/' -e 's@/h1@/a@g')";
   echo "  <ul class=\"toc\">";
@@ -13,7 +13,7 @@ if [ $amountOfFirstSubchapters -gt 0 ]; then
   i=1;
   while [ $i -le $amountOfFirstSubchapters ]; do
     subchapterNumber="${chapterNumber}\.$i";
-    amountOfSecSubchapters=$(grep 'h3' $file | grep "${subchapterNumber}\." | wc -l);
+    amountOfSecSubchapters=$(grep 'h3' $file | grep "id=\"${subchapterNumber}\." | wc -l);
     line=$(grep "id=\"${subchapterNumber}\.[a-z]" $file);
 
     if [ $amountOfSecSubchapters -gt 0 ]; then
